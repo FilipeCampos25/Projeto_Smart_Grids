@@ -1,4 +1,40 @@
-# Desenvolvimento — módulo de Matriz de Adjacência
+# Desenvolvimento — lista, matriz e DFS
+
+## DFS — execução da issue #8 (01/10/2026)
+
+O contrato e as evidências estão em [dfs.md](dfs.md). Foram acrescentados
+`include/dfs.h`, `src/dfs.c`, `tests/test_dfs.c` e esse guia. As representações
+publicadas são usadas sem alterações. O Makefile agora compila e executa seis
+suites: matriz, alocação da matriz, lista, alocação da lista, DFS e alocação da DFS.
+Os testes preexistentes da lista voltaram a integrar o alvo geral após a integração
+das duas representações. `test-dfs` executa só as duas suites da nova travessia;
+`test-falhas` reúne as três suites com alocação instrumentada.
+
+Na sessão PowerShell, usando o LLVM-MinGW portátil já disponível:
+
+```powershell
+Set-Location 'C:\Users\lipec\Desktop\smart_grids\Projeto_Smart_Grids'
+$env:PATH = 'D:\smart-grids-tools\llvm-mingw-20260922-ucrt-x86_64\bin;' + $env:PATH
+$env:TEMP = 'D:\smart-grids-tools\temp'
+$env:TMP = $env:TEMP
+mingw32-make CC=clang BUILD_DIR=build/dfs all
+mingw32-make CC=clang BUILD_DIR=build/dfs test
+$env:ASAN_OPTIONS = 'halt_on_error=1'
+$env:UBSAN_OPTIONS = 'halt_on_error=1'
+mingw32-make CC=clang BUILD_DIR=build/dfs sanitize
+```
+
+Os três alvos retornaram **0**. Clang 23.1.2, GNU Make 4.4.1, C11,
+`-Wall -Wextra -Wpedantic`; compilação sem avisos e ASan/UBSan sem diagnósticos.
+DFS normal: **4.755 verificações / zero falhas**; DFS instrumentada:
+**5.743 verificações / zero falhas**, incluindo quatro pontos de falha por
+representação e zero blocos vivos ao final. As quatro suites anteriores passaram.
+Logs locais, ignorados pelo Git: `build/dfs-compilacao.log`,
+`build/dfs-testes.log` e `build/dfs-sanitizadores.log`.
+
+O uso de `build/dfs` preservou os artefatos anteriores da matriz. Dados reais
+continuam **não executados**, pois faltam dataset e carregador. As seções abaixo
+preservam o registro da entrega anterior da matriz, com seus comandos e ambiente.
 
 ## Arquivos e dependências
 
