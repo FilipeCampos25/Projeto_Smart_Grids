@@ -94,3 +94,21 @@ explica a pilha, as ordens distintas de vizinhança, a memória e os resultados.
 Consulte os [comandos e logs](docs/development.md) para reproduzir a validação.
 **O teste com dataset real continua pendente:** faltam os arquivos e o carregador
 da #4; os testes sintéticos não concluem esse critério da #8.
+
+## Algoritmos complementares da Fase I — F1-15
+
+O módulo `src/algoritmos_complementares.c` acrescenta conectividade fraca/forte
+em dígrafos, articulações, pontes, verificação da Fórmula de Euler e coloração
+gulosa. Ele reutiliza a lista existente e uma extensão direcionada compatível da
+matriz. A criação tradicional da matriz permanece não direcionada.
+
+```sh
+make CC=gcc all
+make CC=gcc test-complementares
+make CC=gcc test
+```
+
+O último alvo executa também as regressões de matriz, lista, BFS e DFS. Consulte
+[algoritmos, exemplos e resultados](docs/algoritmos-complementares.md). A fórmula
+e a desigualdade de Euler são verificações acadêmicas, não um teste geral de
+planaridade. A issue de componentes conexos continua aberta e fora deste escopo.
