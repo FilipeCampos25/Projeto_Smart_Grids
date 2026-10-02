@@ -71,3 +71,23 @@ Consulte [compilação e execução](docs/development.md) e
 [contrato, explicação e resultados da matriz](docs/matriz-adjacencia.md).
 A integração com dados reais permanece **pendente** das issues #3 e #4:
 o repositório ainda não contém modelagem definitiva, carregador ou dataset.
+
+
+## Busca em largura (F1-06)
+
+A BFS em `src/bfs.c` usa as APIs existentes de lista e matriz. Retorna os
+vértices alcançados, sua quantidade, ordem de visita e distâncias em número de
+arestas. Respeita conexões removidas e percorre somente a componente da origem.
+
+```sh
+make CC=gcc all
+make CC=gcc test
+```
+
+A suíte conjunta executa os testes da lista, matriz e BFS, incluindo falhas de
+alocação. Para selecionar somente a BFS, use `make CC=gcc test-bfs`.
+Foram testados o exemplo de seis vértices, as camadas de visita, grafos
+desconectados e uma cadeia e uma estrela de 1.000 vértices nas duas representações.
+
+Consulte [API, explicação da fila, comandos Windows/WSL e resultados](docs/bfs.md).
+O teste com dataset real continua **pendente** do carregador e dos arquivos.
