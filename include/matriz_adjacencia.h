@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 
-/* Grafo nao direcionado, nao ponderado, com indices de 0 a N-1.
+/* Grafo nao ponderado, com indices de 0 a N-1. A criacao tradicional gera
+ * grafo nao direcionado; criar_matriz_direcionada gera um digrafo.
  * A estrutura opaca impede alteracoes externas que quebrem a simetria.
  * Duplicatas sao idempotentes; lacos sao aceitos na diagonal.
  * Essas politicas sao provisorias ate a conclusao da modelagem (#3).
@@ -35,7 +36,16 @@ ResultadoMatriz estimar_memoria_matriz(size_t quantidade_vertices, size_t *bytes
 ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
                             MatrizAdjacencia **matriz_criada);
 
-/* Insere a conexao nos dois sentidos. Indices devem estar em [0, N).
+/* Mesmo contrato de criar_matriz, mas cria um digrafo. Insercoes e remocoes
+ * posteriores alteram somente origem -> destino. A consulta continua igual.
+ * Esta e a menor extensao usada na F1-15; grafos antigos nao mudam. */
+ResultadoMatriz criar_matriz_direcionada(size_t quantidade_vertices,
+                                        size_t limite_bytes,
+                                        MatrizAdjacencia **matriz_criada);
+
+/* Insere a conexao. Na matriz tradicional, grava os dois sentidos; na matriz
+ * direcionada, grava somente vertice_origem -> vertice_destino.
+ * Indices devem estar em [0, N).
  * Repetir uma insercao (inclusive invertida) nao cria arestas paralelas.
  * Lacos usam uma unica celula. Retorna ARGUMENTO_INVALIDO para matriz
  * NULL ou indices invalidos, sem alterar a matriz. Nao aloca memoria.
@@ -43,7 +53,8 @@ ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
 ResultadoMatriz inserir_aresta(MatrizAdjacencia *matriz, size_t vertice_origem,
                               size_t vertice_destino);
 
-/* Remove a conexao nos dois sentidos, mesmo se ja estiver ausente.
+/* Remove a conexao conforme o tipo da matriz, mesmo se ja estiver ausente.
+ * No digrafo, o arco inverso nao e alterado.
  * Valida como inserir_aresta, nao aloca e permite restauracao por nova
  * insercao. Nao guarda historico nem o status de segmentos individuais.
  */
@@ -61,6 +72,9 @@ ResultadoMatriz consultar_adjacencia(const MatrizAdjacencia *matriz,
 
 /* Retorna N, ou zero para NULL. Nao aloca nem transfere propriedade. */
 size_t quantidade_vertices_matriz(const MatrizAdjacencia *matriz);
+
+/* Retorna 1 para matriz direcionada e 0 para tradicional ou NULL. */
+int matriz_e_direcionada(const MatrizAdjacencia *matriz);
 
 /* Retorna os bytes solicitados para cabecalho e celulas, ou zero para
  * NULL. Tem a mesma abrangencia de estimar_memoria_matriz; nao e RSS.

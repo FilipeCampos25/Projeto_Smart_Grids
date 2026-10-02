@@ -25,9 +25,9 @@ elétrico definitivo. `docs/modelagem-grafo.md` permanece sob responsabilidade d
 ## Representação e decisões provisórias
 
 `MatrizAdjacencia` é uma estrutura opaca: o header declara seu nome e as funções,
-mas seus campos ficam no `.c`. Isso evita que um chamador altere somente uma metade
-da matriz e quebre a simetria. Ela contém a quantidade de vértices e um ponteiro
-para um bloco de `unsigned char` com `N*N` células.
+mas seus campos ficam no `.c`. Isso evita alterações externas nas células. Ela
+contém a quantidade de vértices, um ponteiro para um bloco de `unsigned char` com
+`N*N` células e a indicação de modo direcionado ou não direcionado.
 
 Cada célula vale **0** (sem conexão) ou **1** (com conexão). As linhas são armazenadas
 em sequência: `[origem][destino]` está na posição `origem*N + destino`. Não há vetor
@@ -37,7 +37,7 @@ de ponteiros para linhas, atributos, contadores por aresta ou dependência da li
 | --- | --- |
 | IDs | Índices densos `size_t` de `0` até `N-1`; não são IDs brutos da BDGD |
 | Número de vértices | Fixo após a criação; `N=0` é válido e não tem índices consultáveis |
-| Direção/pesos | Não direcionado e não ponderado, para conectividade na Fase I |
+| Direção/pesos | Não ponderado; criação tradicional não direcionada e criação opcional direcionada |
 | Duplicatas | Inserções repetidas, inclusive invertidas, mantêm uma conexão binária |
 | Laços | Aceitos explicitamente na diagonal; ausentes até serem inseridos |
 | Isolados | Preservados como linhas/colunas zeradas, como o vértice 5 do exemplo |
@@ -52,6 +52,15 @@ identifica segmentos paralelos individualmente**. O chamador deve guardar o que
 pretende restaurar. Se dois segmentos ligarem o mesmo par, remover esse par elimina
 sua adjacência inteira; a futura integração deve resolver o estado agregado dos
 segmentos conforme a modelagem, antes de atualizar a matriz.
+
+### Extensão direcionada da F1-15
+
+`criar_matriz_direcionada` reutiliza o mesmo tipo opaco e armazenamento para
+representar dígrafos. Nesse modo, inserir/remover altera somente
+`origem -> destino`; o arco inverso é independente. `criar_matriz` preserva o
+comportamento original, simétrico, e todos os testes anteriores continuam usando
+essa função. `matriz_e_direcionada` permite que algoritmos específicos rejeitem
+uma matriz do tipo errado. Consulta, estimativa, teto e destruição são comuns.
 
 ## Funções e uso
 
@@ -129,15 +138,16 @@ bytes = sizeof(MatrizAdjacencia) + N*N*sizeof(unsigned char)
 ```
 
 O cabeçalho inclui o contador, o ponteiro e eventual padding da estrutura.
-`sizeof(unsigned char)` vale 1 byte C. No ambiente Windows x64 testado, o cabeçalho
-ocupa 16 bytes e cada byte tem 8 bits:
+`sizeof(unsigned char)` vale 1 byte C. Após a extensão direcionada, o cabeçalho
+inclui também a indicação do tipo. No ambiente Windows x64 testado, ocupa 24
+bytes (incluindo padding) e cada byte tem 8 bits:
 
 | Vértices | Células | Cabeçalho | Total solicitado |
 | ---: | ---: | ---: | ---: |
-| 0 | 0 | 16 | 16 bytes |
-| 1 | 1 | 16 | 17 bytes |
-| 6 | 36 | 16 | 52 bytes |
-| 1.000 | 1.000.000 | 16 | 1.000.016 bytes (aprox. 0,954 MiB) |
+| 0 | 0 | 24 | 24 bytes |
+| 1 | 1 | 24 | 25 bytes |
+| 6 | 36 | 24 | 60 bytes |
+| 1.000 | 1.000.000 | 24 | 1.000.024 bytes (aprox. 0,954 MiB) |
 
 São os bytes **solicitados** ao alocador pela estrutura. Não incluem arredondamento,
 metadados internos de `malloc`, mapeamento de IDs do futuro carregador, buffers dos
@@ -242,7 +252,7 @@ A fórmula esperada contempla ambas as direções, todos os não vizinhos e a di
 | Células conectadas na cadeia completa | 1.998 | 1.998 | PASSOU |
 | Células conectadas após remoção | 1.996 | 1.996 | PASSOU |
 | Células conectadas após restauração | 1.998 | 1.998 | PASSOU |
-| Bytes estimados, informados e solicitados | 1.000.016 | 1.000.016 | PASSOU |
+| Bytes estimados, informados e solicitados | 1.000.024 | 1.000.024 | PASSOU novamente após a extensão |
 
 ### Entradas inválidas e liberação
 

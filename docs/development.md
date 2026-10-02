@@ -185,3 +185,19 @@ Esses parâmetros selecionam receitas POSIX no Make do MSYS2. O Make nativo
 Veja [bfs.md](bfs.md) para os comandos completos de sanitizadores, contrato da
 API, FIFO, complexidades, resultados esperado/obtido e critérios de aceitação.
 O teste do dataset real permanece pendente por ausência do carregador e arquivos.
+
+## Suíte conjunta após a F1-15
+
+O Makefile agora inclui explicitamente matriz, lista, BFS, DFS e algoritmos
+complementares. A BFS já existia no repositório, mas não estava nos alvos após a
+integração posterior da DFS; seus alvos foram recolocados sem alterar o módulo.
+
+```sh
+make CC=gcc all
+make CC=gcc test
+make CC=gcc test-complementares
+```
+
+Os comandos efetivamente usados no Windows/MSYS2 e no Ubuntu/WSL, os resultados
+esperado/obtido e as limitações estão em
+[algoritmos-complementares.md](algoritmos-complementares.md).
