@@ -9,6 +9,7 @@
 struct MatrizAdjacencia {
     size_t quantidade_vertices;
     unsigned char *conexoes;
+    int direcionada;
 };
 
 ResultadoMatriz estimar_memoria_matriz(size_t quantidade_vertices, size_t *bytes)
@@ -33,8 +34,12 @@ ResultadoMatriz estimar_memoria_matriz(size_t quantidade_vertices, size_t *bytes
     return MATRIZ_SUCESSO;
 }
 
-ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
-                            MatrizAdjacencia **matriz_criada)
+/* Implementacao comum das duas criacoes. O campo direcionada muda apenas a
+ * escrita de conexoes; armazenamento, limites e propriedade permanecem iguais. */
+static ResultadoMatriz criar_matriz_com_tipo(size_t quantidade_vertices,
+                                             size_t limite_bytes,
+                                             int direcionada,
+                                             MatrizAdjacencia **matriz_criada)
 {
     size_t bytes;
     MatrizAdjacencia *nova_matriz;
@@ -56,6 +61,7 @@ ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
     }
     nova_matriz->quantidade_vertices = quantidade_vertices;
     nova_matriz->conexoes = NULL;
+    nova_matriz->direcionada = direcionada;
     if (quantidade_vertices != 0) {
         nova_matriz->conexoes = calloc(quantidade_vertices * quantidade_vertices,
                                       sizeof(unsigned char));
@@ -67,6 +73,21 @@ ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
     /* A propriedade so passa ao chamador depois da construcao completa. */
     *matriz_criada = nova_matriz;
     return MATRIZ_SUCESSO;
+}
+
+ResultadoMatriz criar_matriz(size_t quantidade_vertices, size_t limite_bytes,
+                            MatrizAdjacencia **matriz_criada)
+{
+    return criar_matriz_com_tipo(quantidade_vertices, limite_bytes, 0,
+                                 matriz_criada);
+}
+
+ResultadoMatriz criar_matriz_direcionada(size_t quantidade_vertices,
+                                        size_t limite_bytes,
+                                        MatrizAdjacencia **matriz_criada)
+{
+    return criar_matriz_com_tipo(quantidade_vertices, limite_bytes, 1,
+                                 matriz_criada);
 }
 
 /* Valida o objeto e os dois indices, antes de calcular qualquer posicao.
@@ -94,7 +115,9 @@ static ResultadoMatriz definir_conexao(MatrizAdjacencia *matriz,
     }
     quantidade_vertices = matriz->quantidade_vertices;
     matriz->conexoes[vertice_origem * quantidade_vertices + vertice_destino] = conectados;
-    matriz->conexoes[vertice_destino * quantidade_vertices + vertice_origem] = conectados;
+    if (!matriz->direcionada) {
+        matriz->conexoes[vertice_destino * quantidade_vertices + vertice_origem] = conectados;
+    }
     return MATRIZ_SUCESSO;
 }
 
@@ -125,6 +148,11 @@ ResultadoMatriz consultar_adjacencia(const MatrizAdjacencia *matriz,
 size_t quantidade_vertices_matriz(const MatrizAdjacencia *matriz)
 {
     return matriz == NULL ? 0 : matriz->quantidade_vertices;
+}
+
+int matriz_e_direcionada(const MatrizAdjacencia *matriz)
+{
+    return matriz != NULL && matriz->direcionada;
 }
 
 size_t memoria_matriz(const MatrizAdjacencia *matriz)

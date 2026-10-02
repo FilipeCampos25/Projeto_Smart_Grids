@@ -64,6 +64,18 @@ $(BUILD_DIR)/grafo_lista_falhas.o: src/grafo_lista.c include/grafo_lista.h tests
 $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT): tests/test_grafo_lista.c tests/alocacao_teste.h $(BUILD_DIR)/grafo_lista_falhas.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DGRAFO_LISTA_TESTAR_ALOCACAO tests/test_grafo_lista.c $(BUILD_DIR)/grafo_lista_falhas.o $(LDFLAGS) $(LDLIBS) -o $@
 
+BFS_HEADERS = include/bfs.h include/grafo_lista.h include/matriz_adjacencia.h
+BFS_GRAFOS = src/grafo_lista.c src/matriz_adjacencia.c
+
+$(BUILD_DIR)/teste_bfs$(EXT): src/bfs.c tests/test_bfs.c $(BFS_GRAFOS) $(BFS_HEADERS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) src/bfs.c $(BFS_GRAFOS) tests/test_bfs.c $(LDFLAGS) $(LDLIBS) -o $@
+
+$(BUILD_DIR)/bfs_falhas.o: src/bfs.c $(BFS_HEADERS) tests/alocacao_teste.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include tests/alocacao_teste.h -Dmalloc=teste_malloc -Dfree=teste_free -c src/bfs.c -o $@
+
+$(BUILD_DIR)/teste_bfs_falhas$(EXT): tests/test_bfs.c $(BFS_GRAFOS) $(BFS_HEADERS) tests/alocacao_teste.h $(BUILD_DIR)/bfs_falhas.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DBFS_TESTAR_ALOCACAO $(BFS_GRAFOS) tests/test_bfs.c $(BUILD_DIR)/bfs_falhas.o $(LDFLAGS) $(LDLIBS) -o $@
+
 DFS_HEADERS = include/dfs.h include/grafo_lista.h include/matriz_adjacencia.h
 DFS_GRAFOS = src/grafo_lista.c src/matriz_adjacencia.c
 
@@ -106,6 +118,8 @@ test: all
 	$(EXECUTAR_ALOCACAO)
 	$(EXECUTAR_LISTA)
 	$(EXECUTAR_LISTA_FALHAS)
+	$(EXECUTAR_BFS)
+	$(EXECUTAR_BFS_FALHAS)
 	$(EXECUTAR_DFS)
 	$(EXECUTAR_DFS_FALHAS)
 	$(EXECUTAR_BFS)
@@ -128,6 +142,7 @@ test-componentes: $(BUILD_DIR)/teste_componentes_conexos$(EXT) $(BUILD_DIR)/test
 test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT)
 	$(EXECUTAR_ALOCACAO)
 	$(EXECUTAR_LISTA_FALHAS)
+	$(EXECUTAR_BFS_FALHAS)
 	$(EXECUTAR_DFS_FALHAS)
 	$(EXECUTAR_BFS_FALHAS)
 	$(EXECUTAR_COMPONENTES_FALHAS)
