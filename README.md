@@ -121,3 +121,22 @@ No Windows: `mingw32-make CC=clang test-componentes`. Veja o
 **Sete dos oito critérios da #9 foram validados. O teste real permanece pendente**
 por ausência do dataset e carregador. A identificação da subestação está
 indisponível nas estruturas atuais, que não armazenam atributos de domínio.
+
+## Simulação de falhas — F1-09 / issue #10
+
+O módulo `simulacao_falha` remove temporariamente uma aresta, reutiliza a análise
+de componentes conexos, identifica a componente da subestação e as ilhas
+topológicas, e restaura a conexão. A mesma lógica atende lista e matriz. O
+resultado registra os três estados e pode ser exportado como texto Graphviz DOT,
+sem tornar o Graphviz uma dependência.
+
+```sh
+make test-simulacao  # teste controlado e falhas de alocação
+make test            # todas as regressões e a simulação
+```
+
+O teste controlado corta `1 -- 2` no grafo de seis vértices, com subestação `0`:
+passa de 1 para 2 componentes, identifica `{2,3,4,5}` como ilha topológica e
+retorna a 1 componente após a restauração. Veja o
+[guia da simulação](docs/simulacao-falhas.md). A validação com dataset real
+permanece pendente porque os arquivos e o carregador da #4 não estão no projeto.

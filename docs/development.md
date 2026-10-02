@@ -1,5 +1,37 @@
 # Desenvolvimento — grafos e conectividade
 
+## Simulação de falhas — issue #10 (01/10/2026)
+
+Foram adicionados `include/simulacao_falha.h`, `src/simulacao_falha.c`,
+`tests/test_simulacao_falha.c` e `docs/simulacao-falhas.md`. A branch da issue #10
+foi avançada diretamente até o commit da dependência #9 antes da implementação.
+A simulação compartilha um único fluxo para lista e matriz e chama a API existente
+de componentes conexos; não duplica BFS, DFS nem estrutura de grafo.
+
+Comandos executados:
+
+```powershell
+$env:PATH = 'D:\smart-grids-tools\llvm-mingw-20260922-ucrt-x86_64\bin;' + $env:PATH
+$env:TEMP = 'D:\smart-grids-tools\temp'
+$env:TMP = $env:TEMP
+mingw32-make CC=clang BUILD_DIR=build/issue10 test-simulacao
+mingw32-make CC=clang BUILD_DIR=build/issue10-regressao test
+mingw32-make CC=clang BUILD_DIR=build/issue10-sanitize sanitize
+```
+
+O teste controlado obteve 1 componente antes, 2 depois da falha `1 -- 2`, 4
+vértices fora da componente da subestação `0` e novamente 1 componente após a
+restauração, tanto na lista quanto na matriz. A suíte normal registrou 54
+verificações sem falhas; a instrumentada, 153 verificações sem falhas e 19 pontos
+de alocação exercitados. O alvo geral confirmou as suítes anteriores de matriz,
+lista, BFS, DFS e componentes conexos. O log local está em
+`build/issue10-testes.log` e é ignorado pelo Git.
+
+O comando `dot` não estava disponível; a saída DOT textual foi validada pela
+suíte. O teste real não foi executado porque continuam ausentes o carregador e os
+arquivos de dataset da issue #4. Consulte [simulacao-falhas.md](simulacao-falhas.md)
+para contrato, Graphviz, erros e resultado esperado/obtido.
+
 ## Componentes conexos — execução da issue #9 (01/10/2026)
 
 O [guia de componentes](componentes-conexos.md) registra contratos, explicação,
