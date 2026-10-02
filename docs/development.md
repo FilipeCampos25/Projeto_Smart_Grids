@@ -115,3 +115,37 @@ da integração com dados reais.
 Os logs locais `build/testes.txt` e `build/sanitizadores.txt`, objetos e executáveis
 são ignorados pelo Git. O relato dos resultados está versionável em
 `docs/matriz-adjacencia.md`. Nenhum teste preexistente havia no commit inicial.
+
+
+## Integração da BFS e suíte conjunta — F1-06
+
+Os registros anteriores descrevem a entrega da matriz. Na integração da BFS,
+a lista e a matriz já estavam implementadas; o Makefile passou a compilar e
+executar **seis suítes**: matriz normal/alocação, lista normal/alocação e BFS
+normal/alocação. Os testes preexistentes foram preservados.
+
+```sh
+make CC=gcc all
+make CC=gcc test
+make CC=gcc test-bfs
+```
+
+O último comando seleciona apenas as duas suítes BFS. `test-lista` seleciona as
+duas da lista; `test-falhas` seleciona as três suítes de alocação. `sanitize`
+instrumenta e executa a suíte conjunta em um diretório separado.
+
+Nesta entrega, os testes foram efetivamente executados com GCC 16.2.0 no Windows
+(MSYS2) e GCC 13.3.0 no Ubuntu/WSL, com ASan/UBSan e detecção de vazamentos no WSL.
+Para o Make do MSYS2 neste ambiente, a invocação PowerShell é:
+
+```powershell
+$env:PATH = 'C:\msys64\ucrt64\bin;C:\msys64\usr\bin;' + $env:PATH
+make OS= EXT=.exe CC=gcc BUILD_DIR=build/bfs-windows all
+make OS= EXT=.exe CC=gcc BUILD_DIR=build/bfs-windows test
+```
+
+Esses parâmetros selecionam receitas POSIX no Make do MSYS2. O Make nativo
+`mingw32-make` continua usando as receitas Windows existentes.
+Veja [bfs.md](bfs.md) para os comandos completos de sanitizadores, contrato da
+API, FIFO, complexidades, resultados esperado/obtido e critérios de aceitação.
+O teste do dataset real permanece pendente por ausência do carregador e arquivos.
