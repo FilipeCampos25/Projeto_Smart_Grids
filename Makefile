@@ -1,36 +1,45 @@
-CC = gcc
+CC = cc
 CPPFLAGS = -Iinclude
-CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g
+CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -O2
 BUILD_DIR = build
-EXEEXT =
+
+# GNU Make em Linux/macOS; mingw32-make em Windows (sem exigir Bash).
 ifeq ($(OS),Windows_NT)
-EXEEXT = .exe
+SHELL := cmd.exe
+EXT = .exe
+CRIAR_DIRETORIO = if not exist "$(subst /,\,$@)" mkdir "$(subst /,\,$@)"
+EXECUTAR_MATRIZ = "$(subst /,\,$(BUILD_DIR)/teste_matriz_adjacencia$(EXT))"
+EXECUTAR_ALOCACAO = "$(subst /,\,$(BUILD_DIR)/teste_alocacao$(EXT))"
+else
+EXT =
+CRIAR_DIRETORIO = mkdir -p "$(BUILD_DIR)"
+EXECUTAR_MATRIZ = "$(BUILD_DIR)/teste_matriz_adjacencia$(EXT)"
+EXECUTAR_ALOCACAO = "$(BUILD_DIR)/teste_alocacao$(EXT)"
 endif
 
-.PHONY: all test test-falhas sanitize
-all: $(BUILD_DIR)/teste_grafo_lista$(EXEEXT)
+.PHONY: all test sanitize
+
+all: $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) $(BUILD_DIR)/teste_alocacao$(EXT)
 
 $(BUILD_DIR):
-	mkdir -p "$@"
+	$(CRIAR_DIRETORIO)
 
-$(BUILD_DIR)/grafo_lista.o: src/grafo_lista.c include/grafo_lista.h | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR)/teste_matriz_adjacencia$(EXT): src/matriz_adjacencia.c tests/teste_matriz_adjacencia.c include/matriz_adjacencia.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) src/matriz_adjacencia.c tests/teste_matriz_adjacencia.c $(LDFLAGS) $(LDLIBS) -o $@
 
-$(BUILD_DIR)/teste_grafo_lista$(EXEEXT): tests/test_grafo_lista.c $(BUILD_DIR)/grafo_lista.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) -o $@
+# Apenas este objeto usa alocadores controlados; o modulo de producao
+# nao recebe callbacks nem condicoes especiais para permitir os testes.
+$(BUILD_DIR)/matriz_alocacao.o: src/matriz_adjacencia.c include/matriz_adjacencia.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -Dmalloc=teste_alocar -Dcalloc=teste_alocar_zerado -Dfree=teste_liberar -c src/matriz_adjacencia.c -o $@
 
-test: $(BUILD_DIR)/teste_grafo_lista$(EXEEXT)
-	./$(BUILD_DIR)/teste_grafo_lista$(EXEEXT)
+$(BUILD_DIR)/teste_alocacao$(EXT): tests/teste_alocacao.c include/matriz_adjacencia.h $(BUILD_DIR)/matriz_alocacao.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/teste_alocacao.c $(BUILD_DIR)/matriz_alocacao.o $(LDFLAGS) $(LDLIBS) -o $@
 
-$(BUILD_DIR)/grafo_lista_falhas.o: src/grafo_lista.c include/grafo_lista.h tests/alocacao_teste.h | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -include tests/alocacao_teste.h -Dmalloc=teste_malloc -Drealloc=teste_realloc -Dfree=teste_free -c $< -o $@
+test: all
+	$(EXECUTAR_MATRIZ)
+	$(EXECUTAR_ALOCACAO)
 
-$(BUILD_DIR)/teste_grafo_lista_falhas$(EXEEXT): tests/test_grafo_lista.c tests/alocacao_teste.h $(BUILD_DIR)/grafo_lista_falhas.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) -DGRAFO_LISTA_TESTAR_ALOCACAO tests/test_grafo_lista.c $(BUILD_DIR)/grafo_lista_falhas.o $(LDFLAGS) -o $@
-
-test-falhas: $(BUILD_DIR)/teste_grafo_lista_falhas$(EXEEXT)
-	./$(BUILD_DIR)/teste_grafo_lista_falhas$(EXEEXT)
-
-# Requer GCC/Clang com ASan, UBSan e LeakSanitizer (por exemplo, Linux).
+# Usa outro diretorio para nao reutilizar objetos sem instrumentacao.
+# Requer compilador e runtime com suporte a Address/Undefined Sanitizer.
 sanitize:
-	ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1 $(MAKE) BUILD_DIR=$(BUILD_DIR)/sanitize CFLAGS="$(CFLAGS) -fsanitize=address,undefined -fno-omit-frame-pointer" LDFLAGS="$(LDFLAGS) -fsanitize=address,undefined" test test-falhas
+	$(MAKE) BUILD_DIR=$(BUILD_DIR)/sanitizers CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all" test

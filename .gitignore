@@ -8,5 +8,5 @@ venv/
 env/
 backend/.venv/
 
-# Compilacao e testes C
-build/
+# Binarios e objetos dos testes C
+/build/

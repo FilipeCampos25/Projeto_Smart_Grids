@@ -50,25 +50,24 @@ Distribuidora (BDGD), disponibilizada pela ANEEL.
 
 As tarefas do projeto são gerenciadas utilizando GitHub Issues e GitHub Projects.
 
-## Lista de adjacência — F1-04
+## Matriz de Adjacência (F1-05)
 
-O núcleo em C11 está em `src/grafo_lista.c`, com API documentada em
-`include/grafo_lista.h`. Suporta vértices isolados, inserção e remoção de conexões
-não direcionadas, consulta de vizinhos e liberação da memória.
+O módulo em C11 implementa criação, inserção, consulta, remoção/restauração de
+conexões não direcionadas, liberação e estimativa de memória. Os testes cobrem
+o exemplo de 6 vértices e uma cadeia sintética de 1.000 vértices.
 
-Com GCC e GNU Make instalados, em Linux ou no terminal MSYS2 UCRT64:
+Com compilador C11 e GNU Make instalados, execute na raiz:
 
 ```sh
 make all
-make test test-falhas
+make test
 ```
 
-Os testes comparam o exemplo de seis vértices, uma cadeia sintética de 1.000
-vértices e cenários de entradas inválidas e falhas de alocação. Para sanitizadores
-em um ambiente com suporte (Linux/WSL), execute `make sanitize`.
+No Windows com LLVM-MinGW: `mingw32-make CC=clang test`.
+Para AddressSanitizer/UndefinedBehaviorSanitizer, use `make CC=clang sanitize`
+(ou `mingw32-make CC=clang sanitize` no Windows).
 
-Consulte [desenvolvimento e resultados](docs/development.md) para comandos
-PowerShell, funcionamento da estrutura, evidências e critérios da issue.
-As [hipóteses locais de modelagem](docs/modelagem-grafo.md) são provisórias.
-**A integração com o dataset real permanece pendente**, pois o repositório ainda
-não contém o recorte nem o carregador das issues anteriores.
+Consulte [compilação e execução](docs/development.md) e
+[contrato, explicação e resultados da matriz](docs/matriz-adjacencia.md).
+A integração com dados reais permanece **pendente** das issues #3 e #4:
+o repositório ainda não contém modelagem definitiva, carregador ou dataset.
