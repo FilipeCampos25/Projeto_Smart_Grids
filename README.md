@@ -49,3 +49,25 @@ Distribuidora (BDGD), disponibilizada pela ANEEL.
 ## Organização
 
 As tarefas do projeto são gerenciadas utilizando GitHub Issues e GitHub Projects.
+
+## Matriz de Adjacência (F1-05)
+
+O módulo em C11 implementa criação, inserção, consulta, remoção/restauração de
+conexões não direcionadas, liberação e estimativa de memória. Os testes cobrem
+o exemplo de 6 vértices e uma cadeia sintética de 1.000 vértices.
+
+Com compilador C11 e GNU Make instalados, execute na raiz:
+
+```sh
+make all
+make test
+```
+
+No Windows com LLVM-MinGW: `mingw32-make CC=clang test`.
+Para AddressSanitizer/UndefinedBehaviorSanitizer, use `make CC=clang sanitize`
+(ou `mingw32-make CC=clang sanitize` no Windows).
+
+Consulte [compilação e execução](docs/development.md) e
+[contrato, explicação e resultados da matriz](docs/matriz-adjacencia.md).
+A integração com dados reais permanece **pendente** das issues #3 e #4:
+o repositório ainda não contém modelagem definitiva, carregador ou dataset.

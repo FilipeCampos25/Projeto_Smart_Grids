@@ -7,3 +7,6 @@
 venv/
 env/
 backend/.venv/
+
+# Binarios e objetos dos testes C
+/build/
