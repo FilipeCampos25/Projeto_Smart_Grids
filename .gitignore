@@ -7,3 +7,6 @@
 venv/
 env/
 backend/.venv/
+
+# Compilacao e testes C
+build/

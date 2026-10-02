@@ -49,3 +49,26 @@ Distribuidora (BDGD), disponibilizada pela ANEEL.
 ## Organização
 
 As tarefas do projeto são gerenciadas utilizando GitHub Issues e GitHub Projects.
+
+## Lista de adjacência — F1-04
+
+O núcleo em C11 está em `src/grafo_lista.c`, com API documentada em
+`include/grafo_lista.h`. Suporta vértices isolados, inserção e remoção de conexões
+não direcionadas, consulta de vizinhos e liberação da memória.
+
+Com GCC e GNU Make instalados, em Linux ou no terminal MSYS2 UCRT64:
+
+```sh
+make all
+make test test-falhas
+```
+
+Os testes comparam o exemplo de seis vértices, uma cadeia sintética de 1.000
+vértices e cenários de entradas inválidas e falhas de alocação. Para sanitizadores
+em um ambiente com suporte (Linux/WSL), execute `make sanitize`.
+
+Consulte [desenvolvimento e resultados](docs/development.md) para comandos
+PowerShell, funcionamento da estrutura, evidências e critérios da issue.
+As [hipóteses locais de modelagem](docs/modelagem-grafo.md) são provisórias.
+**A integração com o dataset real permanece pendente**, pois o repositório ainda
+não contém o recorte nem o carregador das issues anteriores.
