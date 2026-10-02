@@ -210,6 +210,16 @@ size_t quantidade_arestas_lista(const GrafoLista *grafo)
     return grafo == NULL ? 0 : grafo->quantidade_arestas;
 }
 
+size_t memoria_lista(const GrafoLista *grafo)
+{
+    if (grafo == NULL) {
+        return 0;
+    }
+    return sizeof(*grafo) +
+           grafo->capacidade_vertices * sizeof(*grafo->vizinhos) +
+           2 * grafo->quantidade_arestas * sizeof(VizinhoLista);
+}
+
 void liberar_grafo_lista(GrafoLista *grafo)
 {
     if (grafo == NULL) {

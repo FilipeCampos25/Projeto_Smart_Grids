@@ -257,12 +257,11 @@ suites instrumentadas incluem novamente os casos funcionais. Qualquer comparaç�
 divergente imprime `FALHOU`, incrementa o contador e faz `main` retornar
 `EXIT_FAILURE`; não se usa `assert` como única verificação.
 
-### Dataset real — não executado / pendente
+### Dataset real
 
-Faltam os arquivos e o carregador da #4. BDGD/ANEEL é a fonte prevista pelo README,
-mas não há distribuidora, versão, circuito/recorte, origem de busca, quantidade de
-vértices ou arestas reais disponíveis para registrar. Não foi criado um parser
-substituto nem usado um grafo sintético como evidência de dados reais.
+O teste de integração carregou o circuito FORCEL/BDGD com 1.838 vértices e 1.837
+arestas. A DFS partindo da subestação alcançou todos os vértices na Lista e na
+Matriz; os vetores de visitados foram comparados semanticamente.
 
 Para concluir esse critério: entregar recorte rastreável e carregador, aplicar o
 mesmo mapeamento de IDs e estado ativo às duas representações, registrar V/E e
@@ -281,8 +280,8 @@ registrar a estimativa e escolher um recorte comum explícito, conforme a #6.
 | Grafos desconectados | Atendido: origem 0 não alcança 5; isolados e corte da cadeia |
 | Pelo menos 1.000 vértices | Atendido: cadeia completa nas duas direções e representações |
 | Grafo pequeno conhecido | Atendido: seis vértices e quatro arestas exatas do pedido |
-| Dataset real | **Pendente:** arquivos e carregador ausentes |
+| Dataset real | Atendido: FORCEL/BDGD, mesmo conjunto nas duas representações |
 | Documentação de implementação/comportamento | Atendido: header, este guia, README e desenvolvimento |
 
-A implementação e a validação sintética estão entregues. A #8 não está
-integralmente concluída enquanto faltar a execução com dados reais.
+A implementação, a validação sintética e a execução com dados reais estão
+entregues.

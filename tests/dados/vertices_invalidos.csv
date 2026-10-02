@@ -1,0 +1,3 @@
+id,tipo,subestacao,circuito
+SE,subestacao,SUB_TESTE,C1
+V1,ponto_conexao,SUB_TESTE,C1

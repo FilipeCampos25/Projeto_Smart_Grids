@@ -1,142 +1,71 @@
-# Smart Grid Graph Analysis
+# Smart Grid — Fase I
 
-Projeto integrador desenvolvido para a disciplina de Teoria dos Grafos.
+Aplicação acadêmica em C para analisar topologia e conectividade de uma rede
+real de distribuição de energia. O projeto carrega um recorte da BDGD/ANEEL,
+constrói a mesma topologia como Lista e Matriz de Adjacência e executa BFS,
+DFS, componentes conexos e uma simulação de falha com ilhas topológicas.
 
-## Tema
+## Estado atual
 
-Smart Grids / Redes de Distribuição de Energia Elétrica.
+- Dataset real: FORCEL, BDGD 2025, circuito `1_SFOR_1`.
+- Topologia normalizada: 1.838 vértices e 1.837 arestas ativas.
+- Subestação `SFOR`, origem externa `1_SFOR_1`.
+- Lista e Matriz validadas semanticamente sobre os mesmos dados.
+- CLI, medições, experimentos N=100/500/1000, CSVs e gráficos disponíveis.
+- Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
+  pontes, verificação acadêmica de Euler e coloração gulosa.
 
-## Objetivo
+“Ilha” significa somente uma componente topológica fora da componente da
+subestação. O projeto não afirma autossuficiência energética e não calcula
+fluxo de potência.
 
-Modelar uma rede de distribuição elétrica real utilizando grafos e aplicar
-algoritmos de conectividade e otimização para analisar contingências,
-reconfiguração da rede e rotas de menor custo.
+## Compilar e executar
 
-## Tecnologias
-
-- Linguagem C
-- Git/GitHub
-- Dataset real de rede elétrica
-- Implementações autorais dos algoritmos de grafos
-
-## Fase I — Topologia e Conectividade
-
-A primeira fase contempla:
-
-- carregamento do dataset;
-- lista de adjacência;
-- matriz de adjacência;
-- BFS;
-- DFS;
-- componentes conexos;
-- simulação de falhas;
-- comparação de tempo e memória.
-
-## Fase II — Otimização e Complexidade
-
-Planejado:
-
-- Prim;
-- Dijkstra;
-- problema NP-Difícil a definir/validar;
-- comparação entre soluções exatas e heurísticas.
-
-## Dataset
-
-A fonte prioritária em avaliação é a Base de Dados Geográfica da
-Distribuidora (BDGD), disponibilizada pela ANEEL.
-
-## Organização
-
-As tarefas do projeto são gerenciadas utilizando GitHub Issues e GitHub Projects.
-
-## Matriz de Adjacência (F1-05)
-
-O módulo em C11 implementa criação, inserção, consulta, remoção/restauração de
-conexões não direcionadas, liberação e estimativa de memória. Os testes cobrem
-o exemplo de 6 vértices e uma cadeia sintética de 1.000 vértices.
-
-Com compilador C11 e GNU Make instalados, execute na raiz:
+É necessário um compilador C11 e GNU Make. Em Linux/macOS:
 
 ```sh
-make all
+make
+make run
 make test
+make test-real
+make experimentos
+python scripts/gerar_graficos.py
 ```
 
-No Windows com LLVM-MinGW: `mingw32-make CC=clang test`.
-Para AddressSanitizer/UndefinedBehaviorSanitizer, use `make CC=clang sanitize`
-(ou `mingw32-make CC=clang sanitize` no Windows).
+No Windows com LLVM-MinGW/MinGW:
 
-Consulte [compilação e execução](docs/development.md) e
-[contrato, explicação e resultados da matriz](docs/matriz-adjacencia.md).
-A integração com dados reais permanece **pendente** das issues #3 e #4:
-o repositório ainda não contém modelagem definitiva, carregador ou dataset.
+```powershell
+mingw32-make CC=clang
+mingw32-make CC=clang run
+mingw32-make CC=clang test
+```
 
-## DFS — F1-07 / issue #8
-
-A busca em profundidade está em `src/dfs.c`, com contrato em `include/dfs.h`.
-`executar_dfs_lista` e `executar_dfs_matriz` usam as representações existentes e
-retornam visitados, ordem de descoberta e quantidade de alcançados. A pilha fica
-no heap, sem recursão. Cada busca visita somente a componente da origem e respeita
-as conexões removidas, sem modificar o grafo. Libere o resultado com
-`liberar_percurso_dfs`.
+O executável é `build/smart_grid` (ou `build/smart_grid.exe`). Para uma
+demonstração não interativa completa:
 
 ```sh
-make all
-make test-dfs  # DFS normal e com falhas de alocação
-make test      # DFS e regressões da lista e da matriz
+build/smart_grid --demo
 ```
 
-No Windows: `mingw32-make CC=clang test-dfs`. O alvo `sanitize` também inclui a DFS.
-Foram executados o exemplo pequeno da issue, ciclos, desconexões e uma cadeia
-sintética de 1.000 vértices nas duas representações. O [guia da DFS](docs/dfs.md)
-explica a pilha, as ordens distintas de vizinhança, a memória e os resultados.
-Consulte os [comandos e logs](docs/development.md) para reproduzir a validação.
-**O teste com dataset real continua pendente:** faltam os arquivos e o carregador
-da #4; os testes sintéticos não concluem esse critério da #8.
+## CLI
 
-## Componentes conexos — F1-08 / issue #9
+O menu alterna Lista/Matriz, executa BFS, DFS e componentes, simula a falha
+real, mostra métricas, exporta DOT e apresenta os algoritmos complementares.
+Entradas inválidas são rejeitadas sem encerrar a aplicação.
 
-`identificar_componentes_conexos_lista` e `identificar_componentes_conexos_matriz`
-identificam todos os componentes, inclusive isolados, reutilizando a BFS com
-visitados e fila compartilhados durante o cálculo. Retornam total, rótulo por
-vértice, tamanhos e membros. O grafo vazio resulta em zero componentes.
-`imprimir_componentes_conexos` apresenta o relatório; libere o resultado com
-`liberar_componentes_conexos`.
-
-As duas representações são não direcionadas. Somente conexões presentes são
-consideradas; após remover/restaurar uma aresta, execute um novo cálculo.
-Resultados anteriores continuam disponíveis para comparação pela futura #10.
+O arquivo DOT pode ser convertido opcionalmente, sem afetar os algoritmos:
 
 ```sh
-make all
-make test-componentes  # exemplo obrigatório, escala, contratos e falhas de alocação
-make test             # dez suítes: lista, matriz, BFS, DFS e componentes
-make CC=clang sanitize
+dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 ```
 
-No Windows: `mingw32-make CC=clang test-componentes`. Veja o
-[guia didático e evidências](docs/componentes-conexos.md) e os
-[comandos executados](docs/development.md).
-**Sete dos oito critérios da #9 foram validados. O teste real permanece pendente**
-por ausência do dataset e carregador. A identificação da subestação está
-indisponível nas estruturas atuais, que não armazenam atributos de domínio.
+## Documentação
 
-## Simulação de falhas — F1-09 / issue #10
+- [Dataset e reprodução](docs/dataset.md)
+- [Modelagem do grafo](docs/modelagem-grafo.md)
+- [Desenvolvimento e testes](docs/development.md)
+- [Consolidação da Fase I](docs/fase-I.md)
+- [Resultados experimentais](docs/resultados-fase-I.md)
 
-O módulo `simulacao_falha` remove temporariamente uma aresta, reutiliza a análise
-de componentes conexos, identifica a componente da subestação e as ilhas
-topológicas, e restaura a conexão. A mesma lógica atende lista e matriz. O
-resultado registra os três estados e pode ser exportado como texto Graphviz DOT,
-sem tornar o Graphviz uma dependência.
-
-```sh
-make test-simulacao  # teste controlado e falhas de alocação
-make test            # todas as regressões e a simulação
-```
-
-O teste controlado corta `1 -- 2` no grafo de seis vértices, com subestação `0`:
-passa de 1 para 2 componentes, identifica `{2,3,4,5}` como ilha topológica e
-retorna a 1 componente após a restauração. Veja o
-[guia da simulação](docs/simulacao-falhas.md). A validação com dataset real
-permanece pendente porque os arquivos e o carregador da #4 não estão no projeto.
+As funcionalidades de otimização (Dijkstra, Prim, Kruskal etc.) pertencem à
+Fase II e não fazem parte desta consolidação.

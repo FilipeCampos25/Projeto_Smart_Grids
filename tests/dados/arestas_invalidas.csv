@@ -1,0 +1,2 @@
+id,origem,destino,tipo,comprimento_m,status,circuito
+A1,SE,ID_INEXISTENTE,segmento_mt,10.0,ativo,C1

@@ -145,6 +145,6 @@ lista, matriz, BFS, DFS, componentes conexos e simulação.
 
 ## Dataset real
 
-**Não executado / pendente.** O repositório ainda não contém arquivos do dataset
-real nem o carregador previsto na issue #4. Não foi inventado um dataset e o grafo
-controlado não foi apresentado como validação real.
+Executado no circuito FORCEL/BDGD. A ponte real `72352 -- 12692` dividiu a rede
+em componentes de 1.149 e 689 vértices; a componente maior contém a subestação.
+Após a simulação, a conexão foi restaurada e a topologia voltou a uma componente.

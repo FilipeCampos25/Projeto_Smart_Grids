@@ -21,10 +21,9 @@ Não foram encontrados `AGENTS.md` aplicáveis. README, documentos, headers, fon
 testes e configuração de build foram inspecionados. Os documentos de arquitetura,
 planejamento, filosofia e orquestração estavam vazios e foram preservados.
 
-**Implementação e testes sintéticos concluídos; validação real pendente.**
-Não havia dataset nem carregador, e as representações não tinham atributos de
-subestação. Não foi implementado outro parser ou modelo de domínio para suprir
-essas dependências. Nenhuma estrutura de grafo paralela foi criada.
+**Implementação, testes sintéticos e validação real concluídos.** O carregador
+mantém os atributos de subestação fora das estruturas genéricas e alimenta as
+duas representações com a mesma topologia.
 
 As APIs existentes são exclusivamente **não direcionadas**: os tipos são opacos,
 e inserir/remover uma conexão altera ambos os sentidos. Não existe parâmetro para
@@ -305,26 +304,12 @@ Os mesmos resultados foram obtidos com ASan/UBSan. O teste usa comparações
 explícitas, imprime esperado/obtido e `PASSOU`/`FALHOU`, e retorna `EXIT_FAILURE`
 se qualquer comparação falhar, inclusive quando compilado com `NDEBUG`.
 
-### Dataset real — NÃO EXECUTADO / PENDENTE
+### Dataset real
 
-Fonte prevista: **BDGD/ANEEL**, conforme README. Distribuidora, versão, arquivos
-e recorte não foram entregues; V e E reais são **desconhecidos**. Nenhuma
-verificação de dados reais foi executada. Os casos acima não são recortes BDGD.
-
-Para cumprir esse critério, faltam a modelagem da #3, o dataset/recorte das
-dependências e o carregador da #4. Quando estiverem disponíveis, a integração deve:
-
-1. Registrar fonte, distribuidora, versão/data e recorte reproduzível.
-2. Usar o carregador existente para mapear IDs externos para os mesmos índices
-   nas duas representações, incluindo vértices isolados.
-3. Respeitar as decisões de laços, duplicatas/segmentos paralelos e conexões ativas,
-   registrando V, segmentos e pares únicos efetivamente presentes.
-4. Estimar a memória da matriz e registrar qualquer limite/recorte necessário,
-   usando a mesma topologia na lista e na matriz, sem truncamento silencioso.
-5. Calcular todas as componentes sem presumir rede conectada. Conferir cobertura
-   exata, soma dos tamanhos, membros, equivalência das partições, subestações
-   quando mapeadas e recálculo após falha/restauração.
-6. Registrar comandos, contagens e resultados reais neste guia.
+No recorte FORCEL/BDGD, Lista e Matriz retornaram uma componente com os 1.838
+vértices. O teste compara a relação “está na mesma componente” para todos os
+pares, sem depender dos rótulos internos, e identifica a componente da
+subestação registrada pelo carregador.
 
 ## Critérios de aceitação da #9
 
@@ -337,7 +322,6 @@ dependências e o carregador da #4. Quando estiverem disponíveis, a integraçã
 | Funciona em rede totalmente conectada | Atendido | União dos oito vértices e cadeia de 1.000 |
 | Funciona em rede desconectada | Atendido | Original, falha, ciclos separados e 1.000 isolados |
 | Resultado validado em grafo pequeno controlado | Atendido | Exemplo obrigatório executado nas duas APIs, com comparações programáticas |
-| Resultado validado com dataset real | **Pendente** | Não há arquivos/recorte nem carregador para executar |
+| Resultado validado com dataset real | Atendido | FORCEL/BDGD; uma partição idêntica nas duas APIs |
 
-Portanto, **7 de 8 critérios atendidos**. A issue não está integralmente concluída
-enquanto a validação com o dataset real permanecer pendente.
+Portanto, os oito critérios estão atendidos.

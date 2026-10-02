@@ -63,6 +63,11 @@ const VizinhoLista *proximo_vizinho_lista(const VizinhoLista *vizinho);
 size_t quantidade_vertices_lista(const GrafoLista *grafo);
 size_t quantidade_arestas_lista(const GrafoLista *grafo);
 
+/* Retorna a memoria solicitada pelas estruturas internas da lista: cabecalho,
+ * capacidade atual do vetor de listas e dois nos por aresta. Nao inclui
+ * metadados do alocador nem memoria de resultados/atributos externos. */
+size_t memoria_lista(const GrafoLista *grafo);
+
 /* Libera todos os nos, o vetor e o grafo, inclusive construcao parcial.
  * Aceita NULL. O chamador deve descartar ponteiros/iteradores antigos. */
 void liberar_grafo_lista(GrafoLista *grafo);

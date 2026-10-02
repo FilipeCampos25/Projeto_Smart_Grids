@@ -16,11 +16,9 @@ Inspeção em **01/10/2026**, no fuso America/Sao_Paulo:
   [#6 (matriz)](https://github.com/FilipeCampos25/Projeto_Smart_Grids/issues/6).
   Todas estavam abertas, sem comentários, confirmado nos endpoints de comentários.
 
-**O módulo e os testes sintéticos estão implementados e executados. A integração
-com o dataset continua pendente.** A #3 contém propostas e decisões ainda abertas;
-a #4 sugere CSV/TXT, sem contrato C ou arquivos disponíveis; a #5 não tem API
-implementada. Este trabalho não implementa essas dependências nem define o modelo
-elétrico definitivo. `docs/modelagem-grafo.md` permanece sob responsabilidade da #3.
+**O módulo, os testes sintéticos e a integração com o dataset estão implementados
+e executados.** O contrato final está em `docs/modelagem-grafo.md`; o carregador
+constrói a matriz a partir dos mesmos pares usados pela lista.
 
 ## Representação e decisões provisórias
 
@@ -45,8 +43,8 @@ de ponteiros para linhas, atributos, contadores por aresta ou dependência da li
 | Conexão já ausente | Remoção retorna sucesso e não altera as demais células |
 | Erro de entrada | Não altera a matriz nem a saída de uma consulta/estimativa |
 
-A política de laços foi escolhida para não descartar silenciosamente uma conexão
-recebida. A definição definitiva continua pendente na #3. A matriz guarda apenas
+A matriz genérica aceita laços, mas a modelagem final os rejeita antes da carga.
+A matriz guarda apenas
 conectividade entre pares: **não distingue ausência original de desativação e não
 identifica segmentos paralelos individualmente**. O chamador deve guardar o que
 pretende restaurar. Se dois segmentos ligarem o mesmo par, remover esse par elimina
@@ -282,11 +280,9 @@ Isso não é uma medição de vazamentos de todos os componentes do processo.
 
 ### Dataset real
 
-**NÃO EXECUTADO / PENDENTE:** não há arquivos do dataset nem carregador.
-A BDGD/ANEEL é a fonte prevista pelo README, ainda sem distribuidora, versão,
-arquivos ou recorte entregues. N e quantidade de arestas reais são desconhecidos;
-nenhuma verificação de dados reais foi executada. Os dois grafos acima são
-entradas controladas geradas nos testes, e não recortes da BDGD.
+**EXECUTADO:** a matriz representou os 1.838 vértices e 1.837 arestas do circuito
+FORCEL/BDGD. A comparação exaustiva de cada par confirmou a mesma topologia da
+Lista; BFS, DFS e componentes produziram resultados semanticamente equivalentes.
 
 ## Critérios de aceitação
 
@@ -298,7 +294,7 @@ entradas controladas geradas nos testes, e não recortes da BDGD.
 | Consulta de adjacência | Atendido | Comparação de todas as células, inclusive ausências |
 | Grafo não direcionado | Atendido | Verificação dos inversos e da simetria |
 | Remoção/desativação | Atendido para pares | Remoção dos dois sentidos e reinserção sem alterar demais células |
-| Integra com dataset | **Pendente** | Bloqueada por modelo, carregador e arquivos ausentes |
+| Integra com dataset | Atendido | FORCEL/BDGD, 1.838 vértices e comparação exaustiva |
 | Liberação correta | Atendido nos cenários testados | Contabilidade zerada, falhas injetadas, ASan/UBSan |
 | Sem biblioteca externa de grafos | Atendido | Apenas biblioteca padrão C no módulo |
 | Memória mensurável | Atendido | Estimativa comparada com bytes solicitados ao alocador |

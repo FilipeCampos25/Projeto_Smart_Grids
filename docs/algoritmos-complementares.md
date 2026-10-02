@@ -163,5 +163,5 @@ vazamento nos caminhos executados. O log também fica em `build/`, ignorado pelo
   profundidade muito maior que a disponível na pilha do processo.
 - A coloração gulosa é válida, mas pode usar mais cores que o número cromático.
 - Euler recebe contagens conhecidas e não substitui algoritmo de planaridade.
-- Componentes conexos (#9), carregador e dataset real continuam ausentes; esta
-  entrega não implementa silenciosamente essas outras issues.
+- Componentes conexos, carregador e dataset real foram integrados na consolidação
+  da Fase I; os algoritmos complementares continuam autorais e sem duplicação.

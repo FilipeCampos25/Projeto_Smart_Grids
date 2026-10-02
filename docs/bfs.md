@@ -20,11 +20,9 @@ O módulo preserva `grafo_lista.h` e `matriz_adjacencia.h`, seus fontes e testes
 O Makefile recebido só executava os testes da matriz; a suíte conjunta agora
 executa também os testes já existentes da lista e os novos testes da BFS.
 
-**BFS em lista e matriz: implementada e testada. Teste com dataset real: pendente.**
-A #4 descreve CSV/TXT preliminares (`vertices.csv` e `edges.csv`), mas não fornece
-carregador C ou arquivos no repositório. A modelagem definitiva também permanece
-pendente. Os IDs usados aqui são índices internos; a tradução dos IDs externos
-caberá ao carregador, compartilhando o mesmo mapeamento nas duas representações.
+**BFS em lista e matriz: implementada e testada também com dataset real.**
+O carregador traduz IDs externos para índices internos e compartilha o mesmo
+mapeamento nas duas representações; veja `docs/dataset.md`.
 
 ## Arquivos e API
 
@@ -299,18 +297,11 @@ Os logs locais completos estão em `build/bfs-windows/testes.log` e
 esperado/obtido e `PASSOU`/`FALHOU`, e retornam `EXIT_FAILURE` se uma comparação
 falhar. Não dependem de `assert` ou de `NDEBUG`.
 
-### Dataset real: não executado
+### Dataset real
 
-**PENDENTE:** não há carregador, arquivos, origem/versão e recorte definidos no
-checkout. A BDGD/ANEEL continua como fonte prevista; distribuidora, circuito,
-quantidades de vértices/arestas reais e origem real da BFS não puderam ser
-registrados. Nenhum grafo sintético foi contado como validação do dataset.
-
-Quando #4 e suas dependências entregarem os dados, será necessário construir
-ambas as representações usando o mesmo mapeamento de IDs e as conexões ativas,
-escolher uma origem existente, executar ambas as funções e registrar origem dos
-arquivos, recorte, V/E, alcançados e comparação de distâncias. Não foi criado
-parser paralelo ou interpretada uma semântica fictícia para o campo `status`.
+**PASSOU:** partindo de `PAC_INI=1_SFOR_1`, a BFS alcançou os 1.838 vértices do
+circuito FORCEL/BDGD tanto na Lista quanto na Matriz. O teste compara o conjunto
+alcançado, sem exigir a mesma ordem de desempate dos vizinhos.
 
 ## Critérios de aceitação da issue #7
 
@@ -325,8 +316,7 @@ parser paralelo ou interpretada uma semântica fictícia para o campo `status`.
 | Grafos desconectados | Atendido: isolado e duas componentes com arestas, sem reinício |
 | Pelo menos 1.000 vértices | Atendido: cadeia e estrela em ambas as representações |
 | Grafo pequeno conhecido | Atendido: exemplo obrigatório, camadas e remoção/restauração |
-| Dataset real | **Pendente:** carregador e arquivos ausentes |
+| Dataset real | Atendido: FORCEL/BDGD, 1.838 vértices nas duas representações |
 
-A issue permanece parcialmente atendida até a validação com dados reais. A
-integração com ambas as representações está concluída; a política definitiva de
-IDs, laços, duplicatas e estados do dataset depende da modelagem/carregamento.
+A integração e a validação real estão concluídas; as políticas de IDs, laços,
+duplicatas e estados estão em `docs/modelagem-grafo.md`.
