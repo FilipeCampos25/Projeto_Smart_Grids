@@ -1,4 +1,60 @@
-# Desenvolvimento — lista, matriz e DFS
+# Desenvolvimento — grafos e conectividade
+
+## Componentes conexos — execução da issue #9 (01/10/2026)
+
+O [guia de componentes](componentes-conexos.md) registra contratos, explicação,
+critérios e resultados. O Makefile compila e executa dez suítes: lista, matriz,
+BFS, DFS e componentes, cada qual normal e com alocação instrumentada.
+O checkout recebido tinha os testes da BFS, mas eles não integravam mais os alvos
+gerais; foram reintegrados para validar a dependência adaptada nesta issue.
+`test-componentes` seleciona as duas novas suítes; `test-bfs`, as duas da BFS;
+`test-falhas`, as cinco com falhas de alocação. `sanitize` executa todas as dez.
+
+Preparação e comandos efetivamente executados em PowerShell:
+
+```powershell
+Set-Location 'C:\Users\lipec\Desktop\smart_grids\Projeto_Smart_Grids'
+$env:PATH = 'D:\smart-grids-tools\llvm-mingw-20260922-ucrt-x86_64\bin;' + $env:PATH
+$env:TEMP = 'D:\smart-grids-tools\temp'
+$env:TMP = $env:TEMP
+mingw32-make CC=clang BUILD_DIR=build/componentes all
+mingw32-make CC=clang BUILD_DIR=build/componentes test-componentes
+mingw32-make CC=clang BUILD_DIR=build/componentes test
+$env:ASAN_OPTIONS = 'halt_on_error=1'
+$env:UBSAN_OPTIONS = 'halt_on_error=1'
+mingw32-make CC=clang BUILD_DIR=build/componentes sanitize
+```
+
+Todos retornaram **0**. Compilador Clang 23.1.2 (LLVM-MinGW), GNU Make 4.4.1,
+C11, `-Wall -Wextra -Wpedantic`; nenhuma advertência de compilação.
+Componentes: **35.295 verificações / zero falhas**; componentes com falhas de
+alocação: **37.794 verificações / zero falhas**. Regressões de lista, matriz,
+BFS e DFS passaram. ASan/UBSan passaram sem diagnósticos; a instrumentação de
+componentes e BFS terminou com zero blocos vivos. Não foi usado LeakSanitizer.
+
+Linha de compilação do teste normal (os espaços entre argumentos são equivalentes):
+
+```powershell
+clang -Iinclude -std=c11 -Wall -Wextra -Wpedantic -O2 src/componentes_conexos.c src/bfs.c src/grafo_lista.c src/matriz_adjacencia.c tests/test_componentes_conexos.c -o build/componentes/teste_componentes_conexos.exe
+```
+
+Após compilar, o binário específico também pode ser executado diretamente:
+
+```powershell
+.\build\componentes\teste_componentes_conexos.exe
+```
+
+Logs locais, ignorados pelo Git: `build/componentes-compilacao.log`,
+`build/componentes-especificos.log`, `build/componentes-testes.log` e
+`build/componentes-sanitizadores.log`. Antes das alterações, as seis suítes que
+integravam `test` também passaram; registro em `build/componentes-base.log`.
+O diretório próprio preserva builds anteriores. Em Linux/macOS, os alvos
+equivalentes são `make all`, `make test-componentes`, `make test` e
+`make CC=clang sanitize`; não se alega execução nesses sistemas nesta entrega.
+
+**Dataset real: não executado.** Faltam arquivos, recorte e carregador. Os testes
+pequenos e os de 1.000 vértices são sintéticos. Subestação: informação indisponível
+nos grafos atuais. Os registros das entregas anteriores são preservados abaixo.
 
 ## DFS — execução da issue #8 (01/10/2026)
 

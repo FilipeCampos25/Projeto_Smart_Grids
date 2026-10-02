@@ -95,20 +95,29 @@ Consulte os [comandos e logs](docs/development.md) para reproduzir a validação
 **O teste com dataset real continua pendente:** faltam os arquivos e o carregador
 da #4; os testes sintéticos não concluem esse critério da #8.
 
-## Algoritmos complementares da Fase I — F1-15
+## Componentes conexos — F1-08 / issue #9
 
-O módulo `src/algoritmos_complementares.c` acrescenta conectividade fraca/forte
-em dígrafos, articulações, pontes, verificação da Fórmula de Euler e coloração
-gulosa. Ele reutiliza a lista existente e uma extensão direcionada compatível da
-matriz. A criação tradicional da matriz permanece não direcionada.
+`identificar_componentes_conexos_lista` e `identificar_componentes_conexos_matriz`
+identificam todos os componentes, inclusive isolados, reutilizando a BFS com
+visitados e fila compartilhados durante o cálculo. Retornam total, rótulo por
+vértice, tamanhos e membros. O grafo vazio resulta em zero componentes.
+`imprimir_componentes_conexos` apresenta o relatório; libere o resultado com
+`liberar_componentes_conexos`.
+
+As duas representações são não direcionadas. Somente conexões presentes são
+consideradas; após remover/restaurar uma aresta, execute um novo cálculo.
+Resultados anteriores continuam disponíveis para comparação pela futura #10.
 
 ```sh
-make CC=gcc all
-make CC=gcc test-complementares
-make CC=gcc test
+make all
+make test-componentes  # exemplo obrigatório, escala, contratos e falhas de alocação
+make test             # dez suítes: lista, matriz, BFS, DFS e componentes
+make CC=clang sanitize
 ```
 
-O último alvo executa também as regressões de matriz, lista, BFS e DFS. Consulte
-[algoritmos, exemplos e resultados](docs/algoritmos-complementares.md). A fórmula
-e a desigualdade de Euler são verificações acadêmicas, não um teste geral de
-planaridade. A issue de componentes conexos continua aberta e fora deste escopo.
+No Windows: `mingw32-make CC=clang test-componentes`. Veja o
+[guia didático e evidências](docs/componentes-conexos.md) e os
+[comandos executados](docs/development.md).
+**Sete dos oito critérios da #9 foram validados. O teste real permanece pendente**
+por ausência do dataset e carregador. A identificação da subestação está
+indisponível nas estruturas atuais, que não armazenam atributos de domínio.
