@@ -71,3 +71,26 @@ Consulte [compilação e execução](docs/development.md) e
 [contrato, explicação e resultados da matriz](docs/matriz-adjacencia.md).
 A integração com dados reais permanece **pendente** das issues #3 e #4:
 o repositório ainda não contém modelagem definitiva, carregador ou dataset.
+
+## DFS — F1-07 / issue #8
+
+A busca em profundidade está em `src/dfs.c`, com contrato em `include/dfs.h`.
+`executar_dfs_lista` e `executar_dfs_matriz` usam as representações existentes e
+retornam visitados, ordem de descoberta e quantidade de alcançados. A pilha fica
+no heap, sem recursão. Cada busca visita somente a componente da origem e respeita
+as conexões removidas, sem modificar o grafo. Libere o resultado com
+`liberar_percurso_dfs`.
+
+```sh
+make all
+make test-dfs  # DFS normal e com falhas de alocação
+make test      # DFS e regressões da lista e da matriz
+```
+
+No Windows: `mingw32-make CC=clang test-dfs`. O alvo `sanitize` também inclui a DFS.
+Foram executados o exemplo pequeno da issue, ciclos, desconexões e uma cadeia
+sintética de 1.000 vértices nas duas representações. O [guia da DFS](docs/dfs.md)
+explica a pilha, as ordens distintas de vizinhança, a memória e os resultados.
+Consulte os [comandos e logs](docs/development.md) para reproduzir a validação.
+**O teste com dataset real continua pendente:** faltam os arquivos e o carregador
+da #4; os testes sintéticos não concluem esse critério da #8.
