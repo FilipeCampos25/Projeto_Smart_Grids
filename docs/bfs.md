@@ -76,6 +76,25 @@ não há sincronização para alterações concorrentes.
 
 ## Como o algoritmo funciona
 
+### Reutilização pelos componentes conexos (#9)
+
+A API pública e as três alocações por chamada permanecem iguais. A inicialização
+foi extraída para `criar_busca_bfs`, e os laços existentes de travessia para
+`continuar_bfs_lista`/`continuar_bfs_matriz`, declarados somente no header interno
+`src/bfs_interno.h`. As funções públicas continuam validando entradas, criando
+uma busca nova e executando apenas a componente da origem.
+
+O módulo de componentes cria a busca uma vez e continua somente a partir de
+origens não visitadas. Cada continuação começa a fila no antigo final de
+`ordem_visita`, preserva as distâncias/marcações anteriores e acrescenta somente
+os novos vértices. Não há inicialização de V posições nem alocação por componente.
+As distâncias internas partem de zero em cada nova origem; componentes não as
+expõe como distâncias globais. Não há segunda implementação da BFS.
+Veja [componentes-conexos.md](componentes-conexos.md) para o contrato e a validação
+conjunta, incluindo a transferência da ordem para a lista de membros.
+
+### Busca pública a partir de uma origem
+
 1. Reserva o resultado, a ordem/fila e as distâncias; inicializa as distâncias em
    `SIZE_MAX`, indicando que nenhum vértice foi visitado.
 2. Marca a origem com distância zero e a coloca no fim da fila.

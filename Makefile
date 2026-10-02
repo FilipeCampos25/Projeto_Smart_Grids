@@ -14,6 +14,10 @@ EXECUTAR_LISTA = "$(subst /,\,$(BUILD_DIR)/teste_grafo_lista$(EXT))"
 EXECUTAR_LISTA_FALHAS = "$(subst /,\,$(BUILD_DIR)/teste_grafo_lista_falhas$(EXT))"
 EXECUTAR_DFS = "$(subst /,\,$(BUILD_DIR)/teste_dfs$(EXT))"
 EXECUTAR_DFS_FALHAS = "$(subst /,\,$(BUILD_DIR)/teste_dfs_falhas$(EXT))"
+EXECUTAR_BFS = "$(subst /,\,$(BUILD_DIR)/teste_bfs$(EXT))"
+EXECUTAR_BFS_FALHAS = "$(subst /,\,$(BUILD_DIR)/teste_bfs_falhas$(EXT))"
+EXECUTAR_COMPONENTES = "$(subst /,\,$(BUILD_DIR)/teste_componentes_conexos$(EXT))"
+EXECUTAR_COMPONENTES_FALHAS = "$(subst /,\,$(BUILD_DIR)/teste_componentes_falhas$(EXT))"
 else
 EXT =
 CRIAR_DIRETORIO = mkdir -p "$(BUILD_DIR)"
@@ -23,13 +27,19 @@ EXECUTAR_LISTA = "$(BUILD_DIR)/teste_grafo_lista$(EXT)"
 EXECUTAR_LISTA_FALHAS = "$(BUILD_DIR)/teste_grafo_lista_falhas$(EXT)"
 EXECUTAR_DFS = "$(BUILD_DIR)/teste_dfs$(EXT)"
 EXECUTAR_DFS_FALHAS = "$(BUILD_DIR)/teste_dfs_falhas$(EXT)"
+EXECUTAR_BFS = "$(BUILD_DIR)/teste_bfs$(EXT)"
+EXECUTAR_BFS_FALHAS = "$(BUILD_DIR)/teste_bfs_falhas$(EXT)"
+EXECUTAR_COMPONENTES = "$(BUILD_DIR)/teste_componentes_conexos$(EXT)"
+EXECUTAR_COMPONENTES_FALHAS = "$(BUILD_DIR)/teste_componentes_falhas$(EXT)"
 endif
 
-.PHONY: all test test-dfs test-falhas sanitize
+.PHONY: all test test-dfs test-bfs test-componentes test-falhas sanitize
 
 all: $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) $(BUILD_DIR)/teste_alocacao$(EXT)
 all: $(BUILD_DIR)/teste_grafo_lista$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT)
 all: $(BUILD_DIR)/teste_dfs$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT)
+all: $(BUILD_DIR)/teste_bfs$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT)
+all: $(BUILD_DIR)/teste_componentes_conexos$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT)
 
 $(BUILD_DIR):
 	$(CRIAR_DIRETORIO)
@@ -67,6 +77,30 @@ $(BUILD_DIR)/dfs_falhas.o: src/dfs.c $(DFS_HEADERS) tests/alocacao_teste.h | $(B
 $(BUILD_DIR)/teste_dfs_falhas$(EXT): tests/test_dfs.c $(DFS_GRAFOS) $(DFS_HEADERS) tests/alocacao_teste.h $(BUILD_DIR)/dfs_falhas.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DDFS_TESTAR_ALOCACAO $(DFS_GRAFOS) tests/test_dfs.c $(BUILD_DIR)/dfs_falhas.o $(LDFLAGS) $(LDLIBS) -o $@
 
+BFS_HEADERS = include/bfs.h src/bfs_interno.h include/grafo_lista.h include/matriz_adjacencia.h
+GRAFOS = src/grafo_lista.c src/matriz_adjacencia.c
+COMPONENTES_HEADERS = include/componentes_conexos.h $(BFS_HEADERS)
+
+# Reintegra as regressoes da BFS, dependencia reutilizada pelos componentes.
+$(BUILD_DIR)/teste_bfs$(EXT): src/bfs.c tests/test_bfs.c $(GRAFOS) $(BFS_HEADERS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) src/bfs.c $(GRAFOS) tests/test_bfs.c $(LDFLAGS) $(LDLIBS) -o $@
+
+$(BUILD_DIR)/bfs_falhas.o: src/bfs.c $(BFS_HEADERS) tests/alocacao_teste.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include tests/alocacao_teste.h -Dmalloc=teste_malloc -Dfree=teste_free -c src/bfs.c -o $@
+
+$(BUILD_DIR)/teste_bfs_falhas$(EXT): tests/test_bfs.c $(GRAFOS) $(BFS_HEADERS) tests/alocacao_teste.h $(BUILD_DIR)/bfs_falhas.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DBFS_TESTAR_ALOCACAO $(GRAFOS) tests/test_bfs.c $(BUILD_DIR)/bfs_falhas.o $(LDFLAGS) $(LDLIBS) -o $@
+
+$(BUILD_DIR)/teste_componentes_conexos$(EXT): src/componentes_conexos.c src/bfs.c tests/test_componentes_conexos.c $(GRAFOS) $(COMPONENTES_HEADERS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) src/componentes_conexos.c src/bfs.c $(GRAFOS) tests/test_componentes_conexos.c $(LDFLAGS) $(LDLIBS) -o $@
+
+$(BUILD_DIR)/componentes_falhas.o: src/componentes_conexos.c $(COMPONENTES_HEADERS) tests/alocacao_teste.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include tests/alocacao_teste.h -Dmalloc=teste_malloc -Dfree=teste_free -c src/componentes_conexos.c -o $@
+
+# Instrumenta tambem a BFS: inclui falhas da dependencia e a transferencia da fila.
+$(BUILD_DIR)/teste_componentes_falhas$(EXT): tests/test_componentes_conexos.c $(GRAFOS) $(COMPONENTES_HEADERS) tests/alocacao_teste.h $(BUILD_DIR)/componentes_falhas.o $(BUILD_DIR)/bfs_falhas.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DCOMPONENTES_TESTAR_ALOCACAO $(GRAFOS) tests/test_componentes_conexos.c $(BUILD_DIR)/componentes_falhas.o $(BUILD_DIR)/bfs_falhas.o $(LDFLAGS) $(LDLIBS) -o $@
+
 test: all
 	$(EXECUTAR_MATRIZ)
 	$(EXECUTAR_ALOCACAO)
@@ -74,15 +108,29 @@ test: all
 	$(EXECUTAR_LISTA_FALHAS)
 	$(EXECUTAR_DFS)
 	$(EXECUTAR_DFS_FALHAS)
+	$(EXECUTAR_BFS)
+	$(EXECUTAR_BFS_FALHAS)
+	$(EXECUTAR_COMPONENTES)
+	$(EXECUTAR_COMPONENTES_FALHAS)
 
 test-dfs: $(BUILD_DIR)/teste_dfs$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT)
 	$(EXECUTAR_DFS)
 	$(EXECUTAR_DFS_FALHAS)
 
-test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT)
+test-bfs: $(BUILD_DIR)/teste_bfs$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT)
+	$(EXECUTAR_BFS)
+	$(EXECUTAR_BFS_FALHAS)
+
+test-componentes: $(BUILD_DIR)/teste_componentes_conexos$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT)
+	$(EXECUTAR_COMPONENTES)
+	$(EXECUTAR_COMPONENTES_FALHAS)
+
+test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT)
 	$(EXECUTAR_ALOCACAO)
 	$(EXECUTAR_LISTA_FALHAS)
 	$(EXECUTAR_DFS_FALHAS)
+	$(EXECUTAR_BFS_FALHAS)
+	$(EXECUTAR_COMPONENTES_FALHAS)
 
 # Usa outro diretorio para nao reutilizar objetos sem instrumentacao.
 # Requer compilador e runtime com suporte a Address/Undefined Sanitizer.
