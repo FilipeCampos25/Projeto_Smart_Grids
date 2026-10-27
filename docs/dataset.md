@@ -77,3 +77,39 @@ python scripts/preparar_bdgd.py --origem caminho/Forcel_2025.gdb.zip
 Python/GDAL são necessários apenas para preparar os CSVs. O carregamento e
 todo processamento do grafo são realizados em C, sem NetworkX ou biblioteca
 pronta de grafos.
+
+## Verificação da issue F1-01
+
+Auditoria realizada em 26/10/2026 sobre o item oficial e os arquivos
+versionados, sem selecionar ou baixar outra base:
+
+- `main`, `origin/main` e o checkout auditado apontavam para o commit
+  `f1a29753478790c4eb382172e380afb6f214f23a`;
+- o item ArcGIS `cd6c8ecb86c2427493cf4a0d129c2eb4` estava público, identificado
+  como File Geodatabase da FORCEL, com 3.050.832 bytes;
+- a inspeção do GDB confirmou 5.051 registros em `SSDMT`, 980 em `UNSEMT`,
+  1 em `UNREMT`, 12 em `UNCRMT`, 10 em `CTMT`, 8.503 em `PONNOT`, 755 em
+  `UNTRMT` e 1 em `SUB`;
+- o registro `CTMT=1_SFOR_1` confirmou o nome do alimentador, `SUB=SFOR` e
+  `PAC_INI=1_SFOR_1`;
+- os CSVs contêm 1.838 vértices e 1.837 arestas ativas, sendo 1.533 segmentos
+  MT e 304 chaves MT, sem self-loops, pares duplicados ou extremos ausentes;
+- uma nova execução de `scripts/preparar_bdgd.py`, em diretório temporário,
+  reproduziu as mesmas contagens, a mesma subestação e o mesmo conteúdo dos
+  CSVs versionados. A diferença física observada no Windows limitou-se aos
+  terminadores LF/CRLF; após a normalização feita pelo Git, os arquivos foram
+  idênticos.
+
+Saída resumida da reprodução:
+
+```text
+Vertices: 1838
+Arestas: 1837
+Subestacao: SFOR (indice externo 1_SFOR_1)
+Registros ignorados no recorte: {'lacos': 2, 'duplicatas': 0}
+```
+
+Assim, a fonte, a versão, o recorte, as entidades, a referência da subestação,
+as contagens e o procedimento de reprodução exigidos pela F1-01 foram
+confirmados. Os CSVs permanecem como evidência versionada caso o serviço
+externo de obtenção fique temporariamente indisponível.
