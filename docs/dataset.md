@@ -61,6 +61,116 @@ Arquivos gerados:
 - `data/forcel_2025_circuito_1/arestas.csv`:
   `id,origem,destino,tipo,comprimento_m,status,circuito`.
 
+## Rastreabilidade da estrutura (SPIKE-01)
+
+As conclusões abaixo usam três classes de evidência, para não confundir o que
+está versionado com uma suposição sobre a BDGD completa:
+
+- **observado no recorte versionado:** conteúdo dos dois CSVs;
+- **observado na implementação versionada:** campos e filtros explícitos em
+  `scripts/preparar_bdgd.py`, além das validações de `src/dataset.c` e dos
+  casos definidos em `tests/test_dataset.c`;
+- **registro da auditoria F1-01:** contagens e reprodução do GDB registradas na
+  seção final deste documento. O GDB não está no repositório e, nesta revisão,
+  uma nova obtenção não foi concluída; portanto, não se atribuem ao arquivo
+  original verificações que só podem ser feitas nos CSVs.
+
+### Entidades e relacionamentos efetivamente usados
+
+| Entidade/camada | Papel no processo | Resultado no CSV final |
+|---|---|---|
+| `CTMT` | Seleciona `COD_ID=1_SFOR_1`; fornece `SUB=SFOR` e `PAC_INI=1_SFOR_1` | circuito, subestação e vértice inicial |
+| `SSDMT` | Segmentos de média tensão filtrados por `CTMT` e, quando disponível, `SIT_ATIV` | 1.533 arestas `segmento_mt` |
+| `UNSEMT` | Chaves filtradas por `CTMT`, `SIT_ATIV` e `P_N_OPE` | 304 arestas `chave_mt` fechadas |
+| `UNREMT` e `UNCRMT` | Candidatas a reguladores e compensadores, com os mesmos campos de conexão | nenhum registro desses tipos permaneceu no recorte final |
+| `PONNOT`, `UNTRMT` e `SUB` | Contadas na auditoria F1-01, mas não lidas pelo normalizador | nenhum campo carregado |
+
+O relacionamento é `CTMT.COD_ID = <camada>.CTMT`. Em cada conexão,
+`PAC_1` e `PAC_2` são os identificadores textuais dos extremos. A união dos
+extremos do componente alcançável desde `CTMT.PAC_INI` gera `vertices.csv`; as
+arestas mantêm esses identificadores em `origem` e `destino`. Para este recorte,
+`PAC_INI` e o código do circuito têm o mesmo valor (`1_SFOR_1`), que é marcado
+como `tipo=subestacao`; os demais extremos são `ponto_conexao`.
+
+| Campo BDGD | Uso na normalização | Campo normalizado |
+|---|---|---|
+| `COD_ID` das camadas de conexão | identidade do ativo | `arestas.id` |
+| `PAC_1`, `PAC_2` | extremos da conexão | `arestas.origem`, `arestas.destino` e `vertices.id` |
+| `CTMT` | filtro e vínculo com o circuito | `circuito` nos dois CSVs |
+| `SIT_ATIV` | mantém apenas `AT`, se o campo existir | `status=ativo` |
+| `P_N_OPE` | remove chave normalmente aberta (`A`), se existir | não preservado |
+| `COMP` | comprimento opcional | `comprimento_m` |
+| `CTMT.SUB` | código da subestação | `vertices.subestacao` |
+| `CTMT.PAC_INI` | raiz da busca do componente | vértice inicial do recorte |
+| `CTMT.NOME` | identificação humana na seleção | não preservado |
+
+### Evidências do recorte normalizado
+
+Auditoria direta dos CSVs versionados em 26/10/2026:
+
+| Verificação | Resultado observado |
+|---|---:|
+| Registros em `vertices.csv` | 1.838 |
+| Registros em `arestas.csv` | 1.837 |
+| IDs de vértice duplicados | 0 |
+| IDs de aresta duplicados | 0 |
+| Pares de extremos duplicados, sem considerar direção | 0 |
+| Self-loops | 0 |
+| Arestas com extremo ausente de `vertices.csv` | 0 |
+| Campos obrigatórios vazios | 0 |
+| Circuitos distintos | 1 (`1_SFOR_1`) |
+| Subestações distintas nos vértices | 1 (`SFOR`) |
+
+Todos os 1.533 segmentos têm comprimento: mínimo de 2,24 m, máximo de
+435,06 m e soma de 104.500,97 m. As 304 chaves não têm comprimento. Nenhum
+campo de resistência existe nos CSVs, no modelo `Dataset` ou na seleção de
+campos feita pelo normalizador; logo, resistência **não está disponível para a
+Fase II com os artefatos atuais**.
+
+A auditoria direta alcançou os 1.838 vértices desde a subestação. O teste
+versionado em `tests/test_dataset.c` também exige esse resultado por BFS e DFS,
+em lista e matriz, e exige uma única componente. Assim, **o recorte final** é
+conexo. Como também há `|E| = |V| - 1`, ele é uma árvore. Isso não comprova que
+todo o circuito antes do filtro, nem que a BDGD original, seja conexo: o
+normalizador conserva deliberadamente apenas o componente de `PAC_INI` e não
+registra quantos componentes ou arestas ficaram fora dele.
+
+### Integridade: normalizador versus carregador C
+
+O normalizador elimina extremos vazios/não textuais, self-loops, pares de
+extremos repetidos, ativos inativos, chaves abertas e componentes fora da raiz.
+O registro da F1-01 contabilizou dois self-loops e nenhuma duplicata de par na
+execução reproduzida. A quantidade de extremos incompletos e de conexões fora
+do componente não foi registrada; por isso, permanece desconhecida no arquivo
+original.
+
+`src/dataset.c` não lê o GDB; ele exige cabeçalhos e ordem exatos nos CSVs. Na
+carga, mapeia IDs textuais por tabela hash, rejeita ID de vértice duplicado,
+extremo inexistente, self-loop, aresta cujo status não seja `ativo` e
+comprimento malformado ou negativo. Em qualquer falha, libera a construção
+parcial. O teste com `ID_INEXISTENTE` comprova a rejeição de referência inválida.
+
+Limites relevantes do carregador, que hoje são cobertos pela preparação e pela
+auditoria do recorte, mas não por validação em C:
+
+- não rejeita ID de aresta nem par de extremos duplicado;
+- não confere se `circuito` coincide entre vértices e arestas, nem se é vazio
+  nas arestas;
+- não confere uniformidade de `subestacao` e aceita esse campo vazio;
+- aceita mais de um vértice `subestacao` e usa o primeiro encontrado;
+- não preserva `P_N_OPE`, `SIT_ATIV` original, `NOME`, geometria ou atributos
+  elétricos além do comprimento.
+
+### Campos para a Fase II e hipóteses pendentes
+
+Os campos comprovadamente disponíveis e úteis são: IDs externos, extremos,
+tipo do ativo, circuito, subestação, status normalizado e comprimento dos
+segmentos. Para pesos elétricos, resistência, impedância, material/bitola do
+condutor e tensão nominal exigem nova inspeção das camadas e, possivelmente,
+junções com outras entidades da BDGD. Essa possibilidade é uma **hipótese de
+evolução**, não uma propriedade confirmada deste recorte nem uma exigência já
+suportada pelo carregador.
+
 ## Reprodução
 
 ```sh
