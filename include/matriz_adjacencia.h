@@ -6,8 +6,9 @@
 /* Grafo nao ponderado, com indices de 0 a N-1. A criacao tradicional gera
  * grafo nao direcionado; criar_matriz_direcionada gera um digrafo.
  * A estrutura opaca impede alteracoes externas que quebrem a simetria.
- * Duplicatas sao idempotentes; lacos sao aceitos na diagonal.
- * Essas politicas sao provisorias ate a conclusao da modelagem (#3).
+ * Duplicatas sao idempotentes; lacos sao aceitos na diagonal. O carregamento
+ * do modelo eletrico principal aplica regras mais restritas: grafo simples,
+ * nao direcionado e sem lacos (consulte docs/modelagem-grafo.md).
  */
 typedef struct MatrizAdjacencia MatrizAdjacencia;
 
