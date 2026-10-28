@@ -90,11 +90,10 @@ As regras abaixo separam o contrato do modelo carregado das capacidades das
 estruturas genéricas:
 
 - **Duplicatas:** o normalizador elimina pares repetidos sem considerar a ordem
-  dos extremos. O carregador C não procura previamente IDs de aresta nem pares
-  duplicados: ao construir a Lista, `inserir_aresta_lista` rejeita uma segunda
-  conexão, inclusive invertida, e a carga do grafo falha; a matriz, isoladamente,
-  trata repetição como escrita idempotente. O modelo conceitual conserva no
-  máximo uma aresta por par de PACs e não representa arestas paralelas.
+  dos extremos. O carregador C também rejeita IDs de aresta e pares repetidos,
+  inclusive invertidos, antes da construção das representações. O modelo
+  conceitual conserva no máximo uma aresta por par de PACs e não representa
+  arestas paralelas.
 - **Laços:** o normalizador os elimina e `carregar_dataset` rejeita
   `origem == destino`. A Lista também os rejeita. A API genérica da matriz aceita
   a diagonal, mas esse recurso não pertence ao modelo principal nem é alcançado

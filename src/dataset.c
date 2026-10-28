@@ -1,6 +1,7 @@
 #include "dataset.h"
 
 #include <errno.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -247,6 +248,10 @@ static StatusDataset ler_arestas(FILE *arquivo, Dataset *dataset,
         char *fim_numero;
         ArestaDataset nova = {0};
         numero_linha++;
+        if (strchr(linha, '\n') == NULL && !feof(arquivo)) {
+            definir_erro(erro, numero_linha, "linha de aresta muito longa");
+            return DATASET_FORMATO_INVALIDO;
+        }
         if (!dividir_csv(linha, campos, 7) || campos[0][0] == '\0' ||
             campos[1][0] == '\0' || campos[2][0] == '\0' ||
             campos[3][0] == '\0' || strcmp(campos[5], "ativo") != 0) {
@@ -265,11 +270,28 @@ static StatusDataset ler_arestas(FILE *arquivo, Dataset *dataset,
         if (campos[4][0] != '\0') {
             errno = 0;
             nova.comprimento_m = strtod(campos[4], &fim_numero);
-            if (errno != 0 || *fim_numero != '\0' || nova.comprimento_m < 0) {
+            if (errno != 0 || *fim_numero != '\0' ||
+                !isfinite(nova.comprimento_m) || nova.comprimento_m < 0) {
                 definir_erro(erro, numero_linha, "comprimento invalido");
                 return DATASET_FORMATO_INVALIDO;
             }
             nova.possui_comprimento = 1;
+        }
+        for (size_t i = 0; i < dataset->quantidade_arestas; i++) {
+            const ArestaDataset *existente = &dataset->arestas[i];
+            int mesmo_par =
+                (existente->origem == nova.origem &&
+                 existente->destino == nova.destino) ||
+                (existente->origem == nova.destino &&
+                 existente->destino == nova.origem);
+            if (strcmp(existente->id_externo, campos[0]) == 0) {
+                definir_erro(erro, numero_linha, "ID de aresta duplicado");
+                return DATASET_DUPLICATA;
+            }
+            if (mesmo_par) {
+                definir_erro(erro, numero_linha, "par de vertices duplicado");
+                return DATASET_DUPLICATA;
+            }
         }
         if (dataset->quantidade_arestas == capacidade) {
             size_t nova_capacidade = capacidade == 0 ? 256 : capacidade * 2;
