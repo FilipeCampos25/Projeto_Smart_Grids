@@ -145,15 +145,15 @@ do componente não foi registrada; por isso, permanece desconhecida no arquivo
 original.
 
 `src/dataset.c` não lê o GDB; ele exige cabeçalhos e ordem exatos nos CSVs. Na
-carga, mapeia IDs textuais por tabela hash, rejeita ID de vértice duplicado,
-extremo inexistente, self-loop, aresta cujo status não seja `ativo` e
-comprimento malformado ou negativo. Em qualquer falha, libera a construção
-parcial. O teste com `ID_INEXISTENTE` comprova a rejeição de referência inválida.
+carga, mapeia IDs textuais por tabela hash, rejeita IDs duplicados, pares de
+extremos repetidos em qualquer ordem, extremo inexistente, self-loop, aresta
+cujo status não seja `ativo` e comprimento malformado, não finito ou negativo.
+Em qualquer falha, libera a construção parcial. Os testes cobrem referências
+inválidas, duplicatas e registros malformados.
 
 Limites relevantes do carregador, que hoje são cobertos pela preparação e pela
 auditoria do recorte, mas não por validação em C:
 
-- não rejeita ID de aresta nem par de extremos duplicado;
 - não confere se `circuito` coincide entre vértices e arestas, nem se é vazio
   nas arestas;
 - não confere uniformidade de `subestacao` e aceita esse campo vazio;

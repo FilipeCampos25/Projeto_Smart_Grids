@@ -10,12 +10,81 @@
 static size_t verificacoes;
 static size_t falhas;
 
+static const char *vertices_temporarios = "build/vertices_teste_dataset.csv";
+static const char *arestas_temporarias = "build/arestas_teste_dataset.csv";
+
 static void verificar(const char *descricao, size_t esperado, size_t obtido)
 {
     verificacoes++;
     printf("%s: RESULTADO ESPERADO=%zu RESULTADO OBTIDO=%zu %s\n",
            descricao, esperado, obtido, esperado == obtido ? "PASSOU" : "FALHOU");
     if (esperado != obtido) falhas++;
+}
+
+static int escrever_arquivo(const char *caminho, const char *conteudo)
+{
+    FILE *arquivo = fopen(caminho, "w");
+    int sucesso;
+    if (arquivo == NULL) return 0;
+    sucesso = fputs(conteudo, arquivo) >= 0;
+    sucesso = fclose(arquivo) == 0 && sucesso;
+    return sucesso;
+}
+
+static void testar_entrada_invalida(const char *descricao,
+                                    const char *vertices,
+                                    const char *arestas,
+                                    StatusDataset esperado)
+{
+    Dataset *dataset = NULL;
+    ErroDataset erro;
+    int arquivos_criados = escrever_arquivo(vertices_temporarios, vertices) &&
+                            escrever_arquivo(arestas_temporarias, arestas);
+    verificar("Criar arquivos temporarios", 1, arquivos_criados);
+    if (arquivos_criados) {
+        verificar(descricao, esperado,
+                  carregar_dataset(vertices_temporarios, arestas_temporarias,
+                                    &dataset, &erro));
+        verificar("Carga invalida nao entrega dataset", 0, dataset != NULL);
+    }
+    liberar_dataset(&dataset);
+    remove(vertices_temporarios);
+    remove(arestas_temporarias);
+}
+
+static void testar_linha_aresta_longa(void)
+{
+    static const char vertices[] =
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n";
+    Dataset *dataset = NULL;
+    ErroDataset erro;
+    FILE *arquivo;
+    int arquivos_criados = escrever_arquivo(vertices_temporarios, vertices);
+
+    arquivo = fopen(arestas_temporarias, "w");
+    if (arquivo == NULL) {
+        arquivos_criados = 0;
+    } else {
+        arquivos_criados = arquivos_criados &&
+            fputs("id,origem,destino,tipo,comprimento_m,status,circuito\n"
+                  "A1,SE,V1,", arquivo) >= 0;
+        for (size_t i = 0; i < 4096 && arquivos_criados; i++) {
+            arquivos_criados = fputc('x', arquivo) != EOF;
+        }
+        arquivos_criados = fclose(arquivo) == 0 && arquivos_criados;
+    }
+    verificar("Criar aresta longa", 1, arquivos_criados);
+    if (arquivos_criados) {
+        verificar("Linha de aresta longa rejeitada", DATASET_FORMATO_INVALIDO,
+                  carregar_dataset(vertices_temporarios, arestas_temporarias,
+                                    &dataset, &erro));
+        verificar("Linha longa informa linha 2", 2, erro.linha);
+    }
+    liberar_dataset(&dataset);
+    remove(vertices_temporarios);
+    remove(arestas_temporarias);
 }
 
 static size_t comparar_topologia(const GrafoLista *lista,
@@ -133,6 +202,54 @@ int main(void)
         carregar_dataset("tests/dados/vertices_invalidos.csv",
                          "tests/dados/arestas_invalidas.csv", &invalido, &erro));
     verificar("Carga invalida nao entrega objeto", 0, invalido != NULL);
+
+    testar_entrada_invalida(
+        "ID de vertice duplicado rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "SE,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,SE,segmento_mt,10.0,ativo,C1\n",
+        DATASET_DUPLICATA);
+    testar_entrada_invalida(
+        "ID de aresta duplicado rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n"
+        "V2,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,V1,segmento_mt,10.0,ativo,C1\n"
+        "A1,V1,V2,segmento_mt,5.0,ativo,C1\n",
+        DATASET_DUPLICATA);
+    testar_entrada_invalida(
+        "Par de vertices invertido rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,V1,segmento_mt,10.0,ativo,C1\n"
+        "A2,V1,SE,segmento_mt,10.0,ativo,C1\n",
+        DATASET_DUPLICATA);
+    testar_entrada_invalida(
+        "Comprimento nao finito rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,V1,segmento_mt,nan,ativo,C1\n",
+        DATASET_FORMATO_INVALIDO);
+    testar_linha_aresta_longa();
+
+    remove("build/arquivo_dataset_inexistente.csv");
+    verificar("Erro de I/O em vertices", DATASET_ARQUIVO_INDISPONIVEL,
+        carregar_dataset("build/arquivo_dataset_inexistente.csv",
+                         "tests/dados/arestas_invalidas.csv", &invalido, &erro));
+    verificar("Erro de I/O nao entrega objeto", 0, invalido != NULL);
+    verificar("Erro de I/O em arestas", DATASET_ARQUIVO_INDISPONIVEL,
+        carregar_dataset("tests/dados/vertices_invalidos.csv",
+                         "build/arquivo_dataset_inexistente.csv", &invalido,
+                         &erro));
+    verificar("Erro de I/O em arestas nao entrega objeto", 0, invalido != NULL);
 
     liberar_resultado_simulacao(&simulacao);
     liberar_componentes_conexos(&componentes_lista);

@@ -50,7 +50,8 @@ typedef struct {
 
 /* Le os dois CSVs normalizados. Qualquer erro rejeita a carga inteira, informa
  * linha/motivo e libera a construcao parcial. IDs sao textuais e mapeados por
- * tabela hash; nunca sao usados diretamente como indices. */
+ * tabela hash; nunca sao usados diretamente como indices. IDs repetidos e
+ * pares de vertices duplicados (em qualquer ordem) tambem sao rejeitados. */
 StatusDataset carregar_dataset(const char *arquivo_vertices,
                                const char *arquivo_arestas,
                                Dataset **dataset, ErroDataset *erro);
