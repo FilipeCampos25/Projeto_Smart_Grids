@@ -31,4 +31,6 @@ planar e não é aplicado silenciosamente ao recorte geográfico.
   alocador, atributos do dataset ou RSS do processo.
 - Tempos muito pequenos sofrem variação do sistema; por isso são informadas
   sete repetições e mediana, sem ocultar os valores brutos.
+- Relógio, intervalo medido e esquema de exportação estão documentados em
+  [`metricas-tempo.md`](metricas-tempo.md).
 - Graphviz é opcional e usado apenas para visualização.

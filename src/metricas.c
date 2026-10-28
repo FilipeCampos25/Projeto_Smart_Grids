@@ -1,9 +1,14 @@
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include "metricas.h"
 
 #include "bfs.h"
 #include "componentes_conexos.h"
 #include "dfs.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
@@ -21,13 +26,14 @@ double tempo_atual_milissegundos(void)
     }
 #else
     struct timespec instante;
-    if (timespec_get(&instante, TIME_UTC) != TIME_UTC) {
-        return 1000.0 * (double)clock() / (double)CLOCKS_PER_SEC;
+    if (clock_gettime(CLOCK_MONOTONIC, &instante) == 0) {
+        return (double)instante.tv_sec * 1000.0 +
+               (double)instante.tv_nsec / 1000000.0;
     }
-    return (double)instante.tv_sec * 1000.0 +
-           (double)instante.tv_nsec / 1000000.0;
 #endif
-    return 1000.0 * (double)clock() / (double)CLOCKS_PER_SEC;
+    clock_t instante_cpu = clock();
+    return instante_cpu == (clock_t)-1 ? NAN :
+           1000.0 * (double)instante_cpu / (double)CLOCKS_PER_SEC;
 }
 
 int registrar_metrica(FILE *arquivo, const char *algoritmo,
@@ -36,6 +42,7 @@ int registrar_metrica(FILE *arquivo, const char *algoritmo,
                       size_t repeticao)
 {
     return arquivo != NULL && algoritmo != NULL && representacao != NULL &&
+           isfinite(tempo_ms) && tempo_ms >= 0.0 &&
            fprintf(arquivo, "%s,%s,%zu,%zu,%.6f,%zu,%zu\n", algoritmo,
                    representacao, vertices, arestas, tempo_ms, memoria_bytes,
                    repeticao) >= 0;
