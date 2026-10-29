@@ -244,6 +244,45 @@ static void testar_escala(void)
     liberar_grafo_lista(grafo);
 }
 
+static void testar_memoria_lista(void)
+{
+    GrafoLista *grafo = criar_grafo_lista();
+    size_t memoria_vazia;
+    size_t memoria_isolados;
+    size_t memoria_aresta;
+
+    conferir_numero("memoria do grafo nulo", 0, memoria_lista(NULL), 1);
+    if (grafo == NULL) {
+        return;
+    }
+
+    memoria_vazia = memoria_lista(grafo);
+    conferir_numero("memoria do grafo vazio positiva", 1, memoria_vazia > 0, 1);
+    for (size_t vertice = 0; vertice < 5; vertice++) {
+        size_t indice = SIZE_MAX;
+        conferir_numero("insercao de vertice isolado", LISTA_SUCESSO,
+                        inserir_vertice_lista(grafo, &indice), 0);
+        conferir_numero("indice de vertice isolado", vertice, indice, 0);
+    }
+    memoria_isolados = memoria_lista(grafo);
+    conferir_numero("memoria aumenta com vertices isolados", 1,
+                    memoria_isolados > memoria_vazia, 1);
+    conferir_numero("insercao de aresta valida", LISTA_SUCESSO,
+                    inserir_aresta_lista(grafo, 0, 1), 0);
+    memoria_aresta = memoria_lista(grafo);
+    conferir_numero("memoria aumenta com aresta", 1,
+                    memoria_aresta > memoria_isolados, 1);
+    conferir_numero("duplicata nao altera memoria", memoria_aresta,
+                    memoria_lista(grafo), 1);
+    conferir_numero("duplicata rejeitada", LISTA_ARESTA_DUPLICADA,
+                    inserir_aresta_lista(grafo, 1, 0), 1);
+    conferir_numero("remocao de aresta valida", LISTA_SUCESSO,
+                    remover_aresta_lista(grafo, 0, 1), 1);
+    conferir_numero("remocao restaura memoria", memoria_isolados,
+                    memoria_lista(grafo), 1);
+    liberar_grafo_lista(grafo);
+}
+
 /* Valida erros, saidas preservadas e politica provisoria de grafo simples. */
 static void testar_limites(void)
 {
@@ -430,6 +469,7 @@ int main(void)
 {
     testar_exemplo();
     testar_escala();
+    testar_memoria_lista();
     testar_limites();
 #ifdef GRAFO_LISTA_TESTAR_ALOCACAO
     conferir_numero("blocos vivos apos testes funcionais", 0, blocos_vivos, 1);

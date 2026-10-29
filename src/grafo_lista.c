@@ -212,12 +212,29 @@ size_t quantidade_arestas_lista(const GrafoLista *grafo)
 
 size_t memoria_lista(const GrafoLista *grafo)
 {
+    size_t memoria_vetor;
+    size_t memoria_arestas;
+    size_t total;
+
     if (grafo == NULL) {
         return 0;
     }
-    return sizeof(*grafo) +
-           grafo->capacidade_vertices * sizeof(*grafo->vizinhos) +
-           2 * grafo->quantidade_arestas * sizeof(VizinhoLista);
+    if (grafo->capacidade_vertices > SIZE_MAX / sizeof(*grafo->vizinhos)) {
+        return 0;
+    }
+    memoria_vetor = grafo->capacidade_vertices * sizeof(*grafo->vizinhos);
+    if (grafo->quantidade_arestas > SIZE_MAX / (2 * sizeof(VizinhoLista))) {
+        return 0;
+    }
+    memoria_arestas = 2 * grafo->quantidade_arestas * sizeof(VizinhoLista);
+    if (memoria_vetor > SIZE_MAX - sizeof(*grafo)) {
+        return 0;
+    }
+    total = sizeof(*grafo) + memoria_vetor;
+    if (memoria_arestas > SIZE_MAX - total) {
+        return 0;
+    }
+    return total + memoria_arestas;
 }
 
 void liberar_grafo_lista(GrafoLista *grafo)

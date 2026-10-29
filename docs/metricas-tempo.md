@@ -1,4 +1,4 @@
-# Metodologia das métricas de tempo
+# Metodologia das métricas de tempo e memória
 
 ## Escopo da medição
 
@@ -15,6 +15,44 @@ O relógio é monotônico: `QueryPerformanceCounter` no Windows e
 esse relógio, `clock()` é usado como alternativa. Os valores são convertidos e
 registrados em milissegundos. Falhas do relógio e valores negativos, infinitos
 ou NaN não são exportados como medições.
+
+## Memória estimada das representações
+
+A métrica de memória registrada no CSV se refere à estimativa estrutural da
+representação usada em cada execução, e não ao RSS, heap total do processo,
+metadados do alocador, dataset externo ou memória temporária dos algoritmos.
+
+Para a Lista de Adjacência, a contagem é:
+
+```text
+sizeof(GrafoLista)
++ capacidade_vertices * sizeof(VizinhoLista *)
++ 2 * arestas * sizeof(VizinhoLista)
+```
+
+Esses termos cobrem o cabeçalho do grafo, o vetor de listas de vizinhos na
+capacidade atual e os dois nós alocados por aresta não direcionada. A
+capacidade do vetor é considerada explicitamente porque o grafo pode ter mais
+slots do que vértices efetivamente utilizados. A estimativa usa a quantidade de
+arestas atual, não o número de elementos duplicados da lista, e preserva a
+invariância da estrutura: inserções e remoções alteram apenas a soma em bytes.
+
+Para a Matriz de Adjacência, a contagem é:
+
+```text
+sizeof(MatrizAdjacencia) + N * N * sizeof(unsigned char)
+```
+
+A matriz armazena uma célula por par ordenado de vértices em um bloco contíguo,
+portanto o custo cresce com $N^2$ e o cabeçalho da estrutura é incluído na
+estimativa. A API pública expõe a função `memoria_matriz()` e a estimativa
+`estimar_memoria_matriz()`, enquanto `memoria_lista()` mantém a mesma convenção
+para o grafo em lista.
+
+A implementação protege os cálculos contra overflow de `size_t`, retornando
+zero quando a estimativa excede o intervalo representável sem alterar a API
+pública. A unidade da coluna `memoria_bytes` no CSV é bytes; valores nulos,
+negativos ou fora do intervalo representável são rejeitados durante a escrita.
 
 ## Repetições e exportação
 
