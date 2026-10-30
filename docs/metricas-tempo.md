@@ -76,4 +76,10 @@ fossem resultados de outra máquina ou configuração.
 
 O teste `tests/test_metricas.c` gera um CSV temporário com execuções reais e
 verifica o cabeçalho exato, os metadados, a presença de todas as repetições e
-tempos finitos e não negativos.
+tempos finitos e não negativos. Para N=100, 500 e 1000, também recalcula a
+memória estrutural esperada pelas APIs das duas representações e exige que cada
+linha exporte exatamente esses bytes para o mesmo prefixo com N−1 arestas. O
+teste de alocação da matriz intercepta `malloc`/`calloc` e confirma que a
+estimativa coincide com os tamanhos efetivamente solicitados ao alocador. O
+teste da lista faz a mesma conferência interceptando `malloc`/`realloc`, o que
+inclui a capacidade efetiva do vetor e os dois nós de cada aresta.

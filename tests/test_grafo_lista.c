@@ -8,8 +8,16 @@
 #include "alocacao_teste.h"
 
 static size_t blocos_vivos;
+static size_t bytes_vivos;
 static size_t tentativas_alocacao;
 static size_t falhar_na_tentativa = SIZE_MAX;
+
+/* Cabecalho privado do alocador de teste; max_align_t preserva o alinhamento
+ * exigido por qualquer estrutura alocada pelo modulo. */
+typedef union {
+    max_align_t alinhamento;
+    size_t tamanho;
+} CabecalhoAlocacao;
 
 /* Falha somente na tentativa selecionada, sem afetar a libc do teste. */
 static int deve_falhar(void)
@@ -20,39 +28,50 @@ static int deve_falhar(void)
 /* Bloco devolvido pertence ao chamador, que deve usar teste_free. */
 void *teste_malloc(size_t tamanho)
 {
-    void *bloco;
-    if (deve_falhar()) {
+    CabecalhoAlocacao *cabecalho;
+    if (deve_falhar() || tamanho > SIZE_MAX - sizeof(*cabecalho)) {
         return NULL;
     }
-    bloco = malloc(tamanho);
-    if (bloco != NULL) {
+    cabecalho = malloc(sizeof(*cabecalho) + tamanho);
+    if (cabecalho != NULL) {
+        cabecalho->tamanho = tamanho;
         blocos_vivos++;
+        bytes_vivos += tamanho;
     }
-    return bloco;
+    return cabecalho == NULL ? NULL : cabecalho + 1;
 }
 
 /* Preserva o bloco anterior em falha; o modulo nunca pede tamanho zero. */
 void *teste_realloc(void *ponteiro, size_t tamanho)
 {
-    int novo_bloco = ponteiro == NULL;
-    void *bloco;
-    if (deve_falhar()) {
+    CabecalhoAlocacao *cabecalho_antigo = ponteiro == NULL ? NULL :
+        (CabecalhoAlocacao *)ponteiro - 1;
+    CabecalhoAlocacao *cabecalho_novo;
+    size_t tamanho_antigo = cabecalho_antigo == NULL ? 0 :
+        cabecalho_antigo->tamanho;
+    if (deve_falhar() || tamanho > SIZE_MAX - sizeof(*cabecalho_novo)) {
         return NULL;
     }
-    bloco = realloc(ponteiro, tamanho);
-    if (bloco != NULL && novo_bloco) {
-        blocos_vivos++;
+    cabecalho_novo = realloc(cabecalho_antigo, sizeof(*cabecalho_novo) + tamanho);
+    if (cabecalho_novo != NULL) {
+        cabecalho_novo->tamanho = tamanho;
+        bytes_vivos = bytes_vivos - tamanho_antigo + tamanho;
+        if (cabecalho_antigo == NULL) {
+            blocos_vivos++;
+        }
     }
-    return bloco;
+    return cabecalho_novo == NULL ? NULL : cabecalho_novo + 1;
 }
 
 /* Libera o bloco e atualiza a contagem; aceita NULL como free. */
 void teste_free(void *ponteiro)
 {
     if (ponteiro != NULL) {
+        CabecalhoAlocacao *cabecalho = (CabecalhoAlocacao *)ponteiro - 1;
         blocos_vivos--;
+        bytes_vivos -= cabecalho->tamanho;
+        free(cabecalho);
     }
-    free(ponteiro);
 }
 #endif
 
@@ -390,6 +409,31 @@ static void testar_limites(void)
 }
 
 #ifdef GRAFO_LISTA_TESTAR_ALOCACAO
+/* Compara a estimativa com cada pedido real ao alocador. A cadeia fornece
+ * exatamente N-1 arestas, como os recortes experimentais da Fase I. */
+static void testar_contabilidade_memoria(void)
+{
+    const size_t tamanhos[] = {100, 500, 1000};
+    const size_t quantidade_tamanhos = sizeof(tamanhos) / sizeof(tamanhos[0]);
+
+    for (size_t t = 0; t < quantidade_tamanhos; t++) {
+        GrafoLista *grafo = criar_vertices(tamanhos[t]);
+        if (grafo == NULL) {
+            conferir_numero("criacao para contabilidade", 1, 0, 1);
+            continue;
+        }
+        for (size_t vertice = 1; vertice < tamanhos[t]; vertice++) {
+            conferir_numero("aresta para contabilidade", LISTA_SUCESSO,
+                            inserir_aresta_lista(grafo, vertice - 1, vertice), 0);
+        }
+        conferir_numero("estimativa da lista = bytes solicitados",
+                        bytes_vivos, memoria_lista(grafo), 1);
+        liberar_grafo_lista(grafo);
+        conferir_numero("bytes liberados apos contabilidade", 0,
+                        bytes_vivos, 1);
+    }
+}
+
 /* Constroi uma cadeia sob injecao de falha. Confere o estado parcial e,
  * conforme recuperar, tenta novamente ou libera imediatamente esse estado.
  * A reserva do vetor tambem ocorre quando ja existem arestas no grafo. */
@@ -473,6 +517,8 @@ int main(void)
     testar_limites();
 #ifdef GRAFO_LISTA_TESTAR_ALOCACAO
     conferir_numero("blocos vivos apos testes funcionais", 0, blocos_vivos, 1);
+    conferir_numero("bytes vivos apos testes funcionais", 0, bytes_vivos, 1);
+    testar_contabilidade_memoria();
     testar_falhas_alocacao();
 #endif
     printf("RESULTADO: %s (%zu verificacoes, %zu falhas)\n",
