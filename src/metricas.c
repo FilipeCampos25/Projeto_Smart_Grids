@@ -8,6 +8,7 @@
 #include "componentes_conexos.h"
 #include "dfs.h"
 
+#include <assert.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,6 +16,17 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+enum {
+    QUANTIDADE_TAMANHOS = 3,
+    QUANTIDADE_ALGORITMOS = 3
+};
+
+/* Recortes definidos no protocolo experimental da Fase I. */
+static const size_t TAMANHOS_EXPERIMENTO[QUANTIDADE_TAMANHOS] = {100, 500, 1000};
+static const char *ALGORITMOS[QUANTIDADE_ALGORITMOS] = {
+    "BFS", "DFS", "Componentes"
+};
 
 double tempo_atual_milissegundos(void)
 {
@@ -85,6 +97,12 @@ static int construir_subgrafos(const Dataset *dataset, size_t n,
             (*quantidade_arestas)++;
         }
     }
+    /* Invariantes internas: ambas as representacoes descrevem o mesmo recorte. */
+    assert(quantidade_vertices_lista(*lista) == n);
+    assert(quantidade_vertices_matriz(*matriz) == n);
+    assert(quantidade_arestas_lista(*lista) == *quantidade_arestas);
+    assert(memoria_lista(*lista) != 0);
+    assert(memoria_matriz(*matriz) != 0);
     return 1;
 }
 
@@ -147,8 +165,6 @@ static int medir_matriz(FILE *arquivo, const char *algoritmo,
 int executar_experimentos(const Dataset *dataset, const char *arquivo_csv,
                           size_t repeticoes)
 {
-    const size_t tamanhos[] = {100, 500, 1000};
-    const char *algoritmos[] = {"BFS", "DFS", "Componentes"};
     FILE *arquivo;
     if (dataset == NULL || arquivo_csv == NULL || repeticoes == 0 ||
         dataset->quantidade_vertices < 1000 || dataset->indice_subestacao != 0) {
@@ -160,20 +176,21 @@ int executar_experimentos(const Dataset *dataset, const char *arquivo_csv,
     }
     fputs("algoritmo,representacao,vertices,arestas,tempo_ms,memoria_bytes,repeticao\n",
           arquivo);
-    for (size_t t = 0; t < sizeof(tamanhos) / sizeof(tamanhos[0]); t++) {
+    for (size_t t = 0; t < QUANTIDADE_TAMANHOS; t++) {
         GrafoLista *lista = NULL;
         MatrizAdjacencia *matriz = NULL;
         size_t arestas;
-        if (!construir_subgrafos(dataset, tamanhos[t], &lista, &matriz, &arestas)) {
+        if (!construir_subgrafos(dataset, TAMANHOS_EXPERIMENTO[t], &lista,
+                                 &matriz, &arestas)) {
             fclose(arquivo);
             return 0;
         }
         for (size_t r = 1; r <= repeticoes; r++) {
-            for (size_t a = 0; a < 3; a++) {
-                if (!medir_lista(arquivo, algoritmos[a], lista, tamanhos[t],
-                                 arestas, r) ||
-                    !medir_matriz(arquivo, algoritmos[a], matriz, tamanhos[t],
-                                  arestas, r)) {
+            for (size_t a = 0; a < QUANTIDADE_ALGORITMOS; a++) {
+                if (!medir_lista(arquivo, ALGORITMOS[a], lista,
+                                 TAMANHOS_EXPERIMENTO[t], arestas, r) ||
+                    !medir_matriz(arquivo, ALGORITMOS[a], matriz,
+                                  TAMANHOS_EXPERIMENTO[t], arestas, r)) {
                     liberar_grafo_lista(lista);
                     destruir_matriz(&matriz);
                     fclose(arquivo);

@@ -131,14 +131,15 @@ static void testar_falhas_e_recuperacao(void)
     }
 }
 
-/* Mede as requisicoes reais do modulo para N=0, 1, 6 e 1000, incluindo
- * cabecalho, e verifica que consultas/alteracoes nao alocam auxiliares.
+/* Mede as requisicoes reais do modulo, incluindo os tres recortes da Fase I,
+ * e verifica que consultas/alteracoes nao alocam estruturas auxiliares.
  */
 static void testar_contabilidade(void)
 {
-    const size_t tamanhos[] = {0, 1, 6, 1000};
+    const size_t tamanhos[] = {0, 1, 6, 100, 500, 1000};
+    const size_t quantidade_tamanhos = sizeof(tamanhos) / sizeof(tamanhos[0]);
 
-    for (size_t indice = 0; indice < 4; ++indice) {
+    for (size_t indice = 0; indice < quantidade_tamanhos; ++indice) {
         MatrizAdjacencia *matriz = NULL;
         size_t quantidade_vertices = tamanhos[indice];
         size_t estimativa = 0;
