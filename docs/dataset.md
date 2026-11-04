@@ -52,7 +52,8 @@ e dois self-loops. O componente ativo que contém `PAC_INI` resultou em:
 6. Os vértices são ordenados por BFS determinística (vizinhos em ordem textual),
    começando na subestação. Essa ordem também define os prefixos experimentais.
 7. São preservados ID do ativo, tipo, circuito, status e comprimento quando
-   disponível. Os atributos não são usados como peso nesta fase.
+   disponível. A Fase I continua sem pesos; a modelagem opcional da Fase II usa
+   somente o comprimento comprovadamente disponível.
 
 Arquivos gerados:
 
@@ -162,6 +163,10 @@ auditoria do recorte, mas não por validação em C:
   elétricos além do comprimento.
 
 ### Campos para a Fase II e hipóteses pendentes
+
+A representação ponderada e a política configurável para dados ausentes estão
+documentadas em [fase-II-modelagem.md](fase-II-modelagem.md). Custos assumidos
+são marcados separadamente e não constituem medição física.
 
 Os campos comprovadamente disponíveis e úteis são: IDs externos, extremos,
 tipo do ativo, circuito, subestação, status normalizado e comprimento dos

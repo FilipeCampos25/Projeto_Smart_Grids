@@ -1,11 +1,13 @@
 #include "grafo_lista.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 /* Cada conexao possui dois nos, um em cada extremidade. */
 struct VizinhoLista {
     size_t indice;
+    PesoAresta peso;
     struct VizinhoLista *proximo;
 };
 
@@ -94,8 +96,9 @@ ResultadoLista inserir_vertice_lista(GrafoLista *grafo, size_t *indice_vertice)
     return LISTA_SUCESSO;
 }
 
-ResultadoLista inserir_aresta_lista(GrafoLista *grafo, size_t origem,
-                                   size_t destino)
+static ResultadoLista inserir_aresta_com_peso(GrafoLista *grafo,
+                                              size_t origem, size_t destino,
+                                              const PesoAresta *peso)
 {
     VizinhoLista *vizinho_origem;
     VizinhoLista *vizinho_destino;
@@ -124,13 +127,36 @@ ResultadoLista inserir_aresta_lista(GrafoLista *grafo, size_t origem,
 
     /* So publica a conexao depois de obter memoria para os dois sentidos. */
     vizinho_origem->indice = destino;
+    vizinho_origem->peso = *peso;
     vizinho_origem->proximo = grafo->vizinhos[origem];
     vizinho_destino->indice = origem;
+    vizinho_destino->peso = *peso;
     vizinho_destino->proximo = grafo->vizinhos[destino];
     grafo->vizinhos[origem] = vizinho_origem;
     grafo->vizinhos[destino] = vizinho_destino;
     grafo->quantidade_arestas++;
     return LISTA_SUCESSO;
+}
+
+ResultadoLista inserir_aresta_lista(GrafoLista *grafo, size_t origem,
+                                   size_t destino)
+{
+    const PesoAresta sem_peso = {0, 0.0, ORIGEM_PESO_NAO_INFORMADA};
+    return inserir_aresta_com_peso(grafo, origem, destino, &sem_peso);
+}
+
+ResultadoLista inserir_aresta_ponderada_lista(
+    GrafoLista *grafo, size_t origem, size_t destino, double peso,
+    OrigemPesoAresta origem_peso)
+{
+    PesoAresta peso_aresta;
+    if (!isfinite(peso) || peso < 0.0 ||
+        (origem_peso != ORIGEM_PESO_COMPRIMENTO_MEDIDO &&
+         origem_peso != ORIGEM_PESO_CUSTO_ASSUMIDO)) {
+        return LISTA_PESO_INVALIDO;
+    }
+    peso_aresta = (PesoAresta){1, peso, origem_peso};
+    return inserir_aresta_com_peso(grafo, origem, destino, &peso_aresta);
 }
 
 /* Retorna o endereco do elo que aponta para destino, ou para o NULL final.
@@ -176,6 +202,22 @@ ResultadoLista existe_aresta_lista(const GrafoLista *grafo, size_t origem,
         return LISTA_ARGUMENTO_INVALIDO;
     }
     *existe = encontrar_vizinho(grafo->vizinhos[origem], destino) != NULL;
+    return LISTA_SUCESSO;
+}
+
+ResultadoLista consultar_peso_aresta_lista(const GrafoLista *grafo,
+                                           size_t origem, size_t destino,
+                                           PesoAresta *peso)
+{
+    const VizinhoLista *vizinho;
+    if (!extremos_validos(grafo, origem, destino) || peso == NULL) {
+        return LISTA_ARGUMENTO_INVALIDO;
+    }
+    vizinho = encontrar_vizinho(grafo->vizinhos[origem], destino);
+    if (vizinho == NULL) {
+        return LISTA_ARESTA_INEXISTENTE;
+    }
+    *peso = vizinho->peso;
     return LISTA_SUCESSO;
 }
 

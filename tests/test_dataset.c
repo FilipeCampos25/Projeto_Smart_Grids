@@ -238,6 +238,22 @@ int main(void)
         "id,origem,destino,tipo,comprimento_m,status,circuito\n"
         "A1,SE,V1,segmento_mt,nan,ativo,C1\n",
         DATASET_FORMATO_INVALIDO);
+    testar_entrada_invalida(
+        "Comprimento infinito rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,V1,segmento_mt,inf,ativo,C1\n",
+        DATASET_FORMATO_INVALIDO);
+    testar_entrada_invalida(
+        "Comprimento negativo rejeitado",
+        "id,tipo,subestacao,circuito\n"
+        "SE,subestacao,SUB_TESTE,C1\n"
+        "V1,ponto_conexao,SUB_TESTE,C1\n",
+        "id,origem,destino,tipo,comprimento_m,status,circuito\n"
+        "A1,SE,V1,segmento_mt,-0.01,ativo,C1\n",
+        DATASET_FORMATO_INVALIDO);
     testar_linha_aresta_longa();
 
     remove("build/arquivo_dataset_inexistente.csv");

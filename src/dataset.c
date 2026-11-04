@@ -425,6 +425,124 @@ StatusDataset construir_matriz_dataset(const Dataset *dataset,
     return DATASET_SUCESSO;
 }
 
+static int configuracao_pesos_valida(
+    const ConfiguracaoPesosDataset *configuracao)
+{
+    if (configuracao == NULL) {
+        return 0;
+    }
+    if (configuracao->modo_peso_ausente ==
+        PESO_AUSENTE_MANTER_SEM_PESO) {
+        return 1;
+    }
+    return configuracao->modo_peso_ausente ==
+               PESO_AUSENTE_USAR_CUSTO_ASSUMIDO &&
+           isfinite(configuracao->custo_assumido) &&
+           configuracao->custo_assumido >= 0.0;
+}
+
+static ResultadoLista inserir_aresta_dataset_lista(
+    GrafoLista *grafo, const ArestaDataset *aresta,
+    const ConfiguracaoPesosDataset *configuracao)
+{
+    if (aresta->possui_comprimento) {
+        return inserir_aresta_ponderada_lista(
+            grafo, aresta->origem, aresta->destino, aresta->comprimento_m,
+            ORIGEM_PESO_COMPRIMENTO_MEDIDO);
+    }
+    if (configuracao->modo_peso_ausente ==
+        PESO_AUSENTE_USAR_CUSTO_ASSUMIDO) {
+        return inserir_aresta_ponderada_lista(
+            grafo, aresta->origem, aresta->destino,
+            configuracao->custo_assumido, ORIGEM_PESO_CUSTO_ASSUMIDO);
+    }
+    return inserir_aresta_lista(grafo, aresta->origem, aresta->destino);
+}
+
+StatusDataset construir_lista_ponderada_dataset(
+    const Dataset *dataset, const ConfiguracaoPesosDataset *configuracao,
+    GrafoLista **grafo)
+{
+    GrafoLista *novo;
+    if (dataset == NULL || !configuracao_pesos_valida(configuracao) ||
+        grafo == NULL || *grafo != NULL) {
+        return DATASET_ARGUMENTO_INVALIDO;
+    }
+    novo = criar_grafo_lista();
+    if (novo == NULL) {
+        return DATASET_SEM_MEMORIA;
+    }
+    for (size_t i = 0; i < dataset->quantidade_vertices; i++) {
+        size_t indice;
+        if (inserir_vertice_lista(novo, &indice) != LISTA_SUCESSO ||
+            indice != i) {
+            liberar_grafo_lista(novo);
+            return DATASET_ERRO_GRAFO;
+        }
+    }
+    for (size_t i = 0; i < dataset->quantidade_arestas; i++) {
+        ResultadoLista status = inserir_aresta_dataset_lista(
+            novo, &dataset->arestas[i], configuracao);
+        if (status != LISTA_SUCESSO) {
+            liberar_grafo_lista(novo);
+            return status == LISTA_SEM_MEMORIA ? DATASET_SEM_MEMORIA :
+                                                DATASET_ERRO_GRAFO;
+        }
+    }
+    *grafo = novo;
+    return DATASET_SUCESSO;
+}
+
+static ResultadoMatriz inserir_aresta_dataset_matriz(
+    MatrizAdjacencia *matriz, const ArestaDataset *aresta,
+    const ConfiguracaoPesosDataset *configuracao)
+{
+    if (aresta->possui_comprimento) {
+        return inserir_aresta_ponderada(
+            matriz, aresta->origem, aresta->destino, aresta->comprimento_m,
+            ORIGEM_PESO_COMPRIMENTO_MEDIDO);
+    }
+    if (configuracao->modo_peso_ausente ==
+        PESO_AUSENTE_USAR_CUSTO_ASSUMIDO) {
+        return inserir_aresta_ponderada(
+            matriz, aresta->origem, aresta->destino,
+            configuracao->custo_assumido, ORIGEM_PESO_CUSTO_ASSUMIDO);
+    }
+    return inserir_aresta(matriz, aresta->origem, aresta->destino);
+}
+
+StatusDataset construir_matriz_ponderada_dataset(
+    const Dataset *dataset, const ConfiguracaoPesosDataset *configuracao,
+    MatrizAdjacencia **matriz)
+{
+    size_t bytes;
+    ResultadoMatriz status;
+    if (dataset == NULL || !configuracao_pesos_valida(configuracao) ||
+        matriz == NULL || *matriz != NULL) {
+        return DATASET_ARGUMENTO_INVALIDO;
+    }
+    status = estimar_memoria_matriz_ponderada(dataset->quantidade_vertices,
+                                              &bytes);
+    if (status != MATRIZ_SUCESSO) {
+        return DATASET_ERRO_GRAFO;
+    }
+    status = criar_matriz(dataset->quantidade_vertices, bytes, matriz);
+    if (status != MATRIZ_SUCESSO) {
+        return status == MATRIZ_SEM_MEMORIA ? DATASET_SEM_MEMORIA :
+                                             DATASET_ERRO_GRAFO;
+    }
+    for (size_t i = 0; i < dataset->quantidade_arestas; i++) {
+        status = inserir_aresta_dataset_matriz(
+            *matriz, &dataset->arestas[i], configuracao);
+        if (status != MATRIZ_SUCESSO) {
+            destruir_matriz(matriz);
+            return status == MATRIZ_SEM_MEMORIA ? DATASET_SEM_MEMORIA :
+                                                 DATASET_ERRO_GRAFO;
+        }
+    }
+    return DATASET_SUCESSO;
+}
+
 int buscar_indice_dataset(const Dataset *dataset, const char *id_externo,
                           size_t *indice)
 {

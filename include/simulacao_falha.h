@@ -37,7 +37,7 @@ typedef struct {
 } ResultadoSimulacaoFalha;
 
 /* Simula a falha de uma conexao existente, recalcula os componentes e restaura
- * a aresta antes de retornar. subestacao == SIZE_MAX representa informacao
+ * a aresta com o mesmo peso e origem. subestacao == SIZE_MAX representa informacao
  * ausente. resultado deve apontar para NULL e passa a possuir os tres retratos.
  * Uma aresta removida/desativada e informada como ARESTA_INEXISTENTE.
  * Se a reinsercao falhar na lista por falta de memoria, retorna
