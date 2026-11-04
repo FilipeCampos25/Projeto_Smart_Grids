@@ -48,6 +48,19 @@ typedef struct {
     char mensagem[160];
 } ErroDataset;
 
+typedef enum {
+    PESO_AUSENTE_MANTER_SEM_PESO = 0,
+    PESO_AUSENTE_USAR_CUSTO_ASSUMIDO
+} ModoPesoAusenteDataset;
+
+/* O custo assumido nao e medicao fisica. Ele so e usado em arestas cujo CSV
+ * nao informa comprimento (as 304 chaves no recorte atual). No primeiro modo,
+ * custo_assumido e ignorado e essas arestas permanecem sem peso. */
+typedef struct {
+    ModoPesoAusenteDataset modo_peso_ausente;
+    double custo_assumido;
+} ConfiguracaoPesosDataset;
+
 /* Le os dois CSVs normalizados. Qualquer erro rejeita a carga inteira, informa
  * linha/motivo e libera a construcao parcial. IDs sao textuais e mapeados por
  * tabela hash; nunca sao usados diretamente como indices. IDs repetidos e
@@ -61,6 +74,16 @@ StatusDataset construir_lista_dataset(const Dataset *dataset,
                                       GrafoLista **grafo);
 StatusDataset construir_matriz_dataset(const Dataset *dataset,
                                        MatrizAdjacencia **matriz);
+
+/* Constroem a topologia com pesos. Comprimentos presentes sao copiados em
+ * metros e marcados como medidos. Dados ausentes seguem a configuracao e nunca
+ * sao convertidos implicitamente em resistencia, tempo ou valor financeiro. */
+StatusDataset construir_lista_ponderada_dataset(
+    const Dataset *dataset, const ConfiguracaoPesosDataset *configuracao,
+    GrafoLista **grafo);
+StatusDataset construir_matriz_ponderada_dataset(
+    const Dataset *dataset, const ConfiguracaoPesosDataset *configuracao,
+    MatrizAdjacencia **matriz);
 
 /* Busca linear para interacao/relatorios; a carga usa tabela hash. */
 int buscar_indice_dataset(const Dataset *dataset, const char *id_externo,

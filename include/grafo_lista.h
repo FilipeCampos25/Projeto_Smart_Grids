@@ -1,6 +1,8 @@
 #ifndef GRAFO_LISTA_H
 #define GRAFO_LISTA_H
 
+#include "peso_aresta.h"
+
 #include <stddef.h>
 
 /* Tipos opacos: somente o modulo altera ou libera suas listas. */
@@ -14,7 +16,8 @@ typedef enum {
     LISTA_ARESTA_DUPLICADA,
     LISTA_LACO_NAO_PERMITIDO,
     LISTA_ARESTA_INEXISTENTE,
-    LISTA_LIMITE_EXCEDIDO
+    LISTA_LIMITE_EXCEDIDO,
+    LISTA_PESO_INVALIDO
 } ResultadoLista;
 
 /* Cria um grafo vazio; retorna NULL se faltar memoria.
@@ -30,13 +33,20 @@ ResultadoLista inserir_vertice_lista(GrafoLista *grafo, size_t *indice_vertice);
 /* Insere uma unica conexao nao direcionada entre indices internos validos.
  * Rejeita lacos e duplicatas, inclusive (destino, origem). Retorna o erro
  * correspondente do enum; qualquer erro preserva ambas as vizinhancas.
- * Os dois nos alocados pertencem ao grafo. Nao ha pesos/atributos nesta API. */
+ * Os dois nos alocados pertencem ao grafo. Esta funcao cria uma aresta sem
+ * peso; use inserir_aresta_ponderada_lista quando houver valor rastreavel. */
 ResultadoLista inserir_aresta_lista(GrafoLista *grafo, size_t origem,
                                    size_t destino);
 
-/* Remove e libera a conexao em ambos os sentidos, decrementando a contagem
- * uma vez. Retorna SUCESSO, ARGUMENTO_INVALIDO ou ARESTA_INEXISTENTE.
- * Restaure com inserir_aresta_lista; a remocao nao guarda historico. */
+/* Insere uma conexao com peso finito e nao negativo. Zero e valido. A origem
+ * deve distinguir comprimento medido de custo assumido. Rejeita a origem
+ * NAO_INFORMADA, NaN, infinito e valores negativos sem alterar o grafo. */
+ResultadoLista inserir_aresta_ponderada_lista(
+    GrafoLista *grafo, size_t origem, size_t destino, double peso,
+    OrigemPesoAresta origem_peso);
+
+/* Remove e libera a conexao e seu peso em ambos os sentidos, decrementando a
+ * contagem uma vez. A remocao nao guarda historico. */
 ResultadoLista remover_aresta_lista(GrafoLista *grafo, size_t origem,
                                    size_t destino);
 
@@ -44,6 +54,13 @@ ResultadoLista remover_aresta_lista(GrafoLista *grafo, size_t origem,
  * destino). Retorna SUCESSO ou ARGUMENTO_INVALIDO; erro preserva a saida. */
 ResultadoLista existe_aresta_lista(const GrafoLista *grafo, size_t origem,
                                  size_t destino, int *existe);
+
+/* Consulta uma aresta existente. Aresta sem peso retorna SUCESSO com
+ * possui_peso=0, valor=0 e origem=NAO_INFORMADA. Aresta ausente retorna
+ * ARESTA_INEXISTENTE e preserva a saida. */
+ResultadoLista consultar_peso_aresta_lista(const GrafoLista *grafo,
+                                           size_t origem, size_t destino,
+                                           PesoAresta *peso);
 
 /* Inicia consulta em O(1), escrevendo o primeiro vizinho ou NULL para isolado.
  * Retorna SUCESSO ou ARGUMENTO_INVALIDO; erro preserva a saida.

@@ -69,11 +69,11 @@ PAC genérico como transformador. Uma extensão futura pode ligar os terminais d
 equipamento e preservar seus atributos, mas essa transformação ainda não faz
 parte do modelo implementado.
 
-Comprimento é opcional e está presente nos segmentos do recorte; não é copiado
-para as structs genéricas do grafo nem usado como peso. Resistência, potência,
-geometria e atributos de transformadores não estão disponíveis no `Dataset`
-atual. Logo, uma Fase II ponderada exigirá ampliar a extração e/ou o modelo, e
-não apenas alterar os algoritmos.
+Comprimento é opcional e está presente nos segmentos do recorte. Os construtores
+tradicionais preservam o modelo não ponderado da Fase I; os construtores
+ponderados da Fase II copiam esse comprimento em metros e registram sua origem
+como medida. Resistência, potência, geometria e atributos de transformadores
+não estão disponíveis no `Dataset` atual e não são inferidos.
 
 ## Segmentos e demais conexões
 
@@ -121,7 +121,8 @@ de não direcionamento do modelo elétrico principal.
 | Decisão | Evidência no código |
 |---|---|
 | PACs são vértices e atributos ficam fora do grafo | `VerticeDataset` em `include/dataset.h`; construção consecutiva em `construir_lista_dataset` |
-| Conexões ativas são arestas sem peso | `ArestaDataset`; `construir_lista_dataset` e `construir_matriz_dataset` passam somente os dois índices |
+| Conexões da Fase I são arestas sem peso | `construir_lista_dataset` e `construir_matriz_dataset` passam somente os dois índices |
+| Pesos distinguem medida, hipótese e ausência | `PesoAresta`; construtores ponderados em `include/dataset.h` e contrato em `docs/fase-II-modelagem.md` |
 | Modelo principal não direcionado | dois vizinhos em `src/grafo_lista.c`; `criar_matriz`, não `criar_matriz_direcionada`, em `src/dataset.c` |
 | IDs externos são distintos dos índices | tabela `MapaIds` e campos `origem`/`destino` resolvidos em `src/dataset.c` |
 | Subestação é atributo e raiz explícita | `VerticeDataset.tipo`, `.subestacao` e `Dataset.indice_subestacao` |

@@ -1,10 +1,13 @@
 #ifndef MATRIZ_ADJACENCIA_H
 #define MATRIZ_ADJACENCIA_H
 
+#include "peso_aresta.h"
+
 #include <stddef.h>
 
-/* Grafo nao ponderado, com indices de 0 a N-1. A criacao tradicional gera
- * grafo nao direcionado; criar_matriz_direcionada gera um digrafo.
+/* Grafo com indices de 0 a N-1. A adjacencia independe do peso e as APIs
+ * tradicionais continuam criando conexoes sem peso. A criacao tradicional
+ * gera grafo nao direcionado; criar_matriz_direcionada gera um digrafo.
  * A estrutura opaca impede alteracoes externas que quebrem a simetria.
  * Duplicatas sao idempotentes; lacos sao aceitos na diagonal. O carregamento
  * do modelo eletrico principal aplica regras mais restritas: grafo simples,
@@ -17,7 +20,9 @@ typedef enum {
     MATRIZ_ARGUMENTO_INVALIDO,
     MATRIZ_TAMANHO_INVALIDO,
     MATRIZ_LIMITE_MEMORIA,
-    MATRIZ_SEM_MEMORIA
+    MATRIZ_SEM_MEMORIA,
+    MATRIZ_ARESTA_INEXISTENTE,
+    MATRIZ_PESO_INVALIDO
 } ResultadoMatriz;
 
 /* Calcula sizeof(estrutura) + N*N*sizeof(unsigned char), sem alocar.
@@ -26,6 +31,11 @@ typedef enum {
  * Em erro, nao altera *bytes. Nao inclui metadados do alocador nem RSS.
  */
 ResultadoMatriz estimar_memoria_matriz(size_t quantidade_vertices, size_t *bytes);
+
+/* Estima cabecalho, adjacencias, pesos double e origens de peso. Os vetores
+ * ponderados sao alocados somente na primeira insercao ponderada. */
+ResultadoMatriz estimar_memoria_matriz_ponderada(size_t quantidade_vertices,
+                                                 size_t *bytes);
 
 /* Cria uma matriz sem conexoes. limite_bytes e o teto para a estrutura
  * inteira; zero rejeita inclusive a matriz vazia. matriz_criada deve
@@ -54,6 +64,13 @@ ResultadoMatriz criar_matriz_direcionada(size_t quantidade_vertices,
 ResultadoMatriz inserir_aresta(MatrizAdjacencia *matriz, size_t vertice_origem,
                               size_t vertice_destino);
 
+/* Insere ou atualiza uma conexao com peso finito e nao negativo. Zero e
+ * valido. A origem deve ser MEDIDO ou ASSUMIDO. A operacao e simetrica na
+ * matriz nao direcionada e respeita o teto informado na criacao. */
+ResultadoMatriz inserir_aresta_ponderada(
+    MatrizAdjacencia *matriz, size_t vertice_origem, size_t vertice_destino,
+    double peso, OrigemPesoAresta origem_peso);
+
 /* Remove a conexao conforme o tipo da matriz, mesmo se ja estiver ausente.
  * No digrafo, o arco inverso nao e alterado.
  * Valida como inserir_aresta, nao aloca e permite restauracao por nova
@@ -71,14 +88,21 @@ ResultadoMatriz consultar_adjacencia(const MatrizAdjacencia *matriz,
                                     size_t vertice_origem,
                                     size_t vertice_destino, int *adjacente);
 
+/* Mesmo contrato da consulta da lista: distingue aresta ausente, aresta sem
+ * peso e peso zero. Erros preservam a saida. */
+ResultadoMatriz consultar_peso_aresta(const MatrizAdjacencia *matriz,
+                                      size_t vertice_origem,
+                                      size_t vertice_destino,
+                                      PesoAresta *peso);
+
 /* Retorna N, ou zero para NULL. Nao aloca nem transfere propriedade. */
 size_t quantidade_vertices_matriz(const MatrizAdjacencia *matriz);
 
 /* Retorna 1 para matriz direcionada e 0 para tradicional ou NULL. */
 int matriz_e_direcionada(const MatrizAdjacencia *matriz);
 
-/* Retorna os bytes solicitados para cabecalho e celulas, ou zero para
- * NULL. Tem a mesma abrangencia de estimar_memoria_matriz; nao e RSS.
+/* Retorna os bytes solicitados pelas estruturas internas, ou zero para NULL.
+ * Inclui os vetores ponderados quando eles tiverem sido alocados; nao e RSS.
  * Nao inclui estruturas do chamador e nao aloca memoria.
  */
 size_t memoria_matriz(const MatrizAdjacencia *matriz);

@@ -7,14 +7,19 @@ typedef size_t (*ObterQuantidadeVertices)(const void *grafo);
 typedef int (*ConsultarConexao)(const void *grafo, size_t origem, size_t destino,
                                int *existe);
 typedef int (*AlterarConexao)(void *grafo, size_t origem, size_t destino);
+typedef int (*ConsultarPesoConexao)(const void *grafo, size_t origem,
+                                   size_t destino, PesoAresta *peso);
+typedef int (*RestaurarConexao)(void *grafo, size_t origem, size_t destino,
+                               const PesoAresta *peso);
 typedef StatusComponentes (*IdentificarComponentes)(
     const void *grafo, ComponentesConexos **resultado);
 
 typedef struct {
     ObterQuantidadeVertices quantidade_vertices;
     ConsultarConexao consultar;
+    ConsultarPesoConexao consultar_peso;
     AlterarConexao remover;
-    AlterarConexao inserir;
+    RestaurarConexao restaurar;
     IdentificarComponentes identificar;
 } OperacoesGrafo;
 
@@ -68,6 +73,7 @@ static StatusSimulacaoFalha simular_falha(
     StatusComponentes status_componentes;
     StatusSimulacaoFalha status;
     int conexao_existe = 0;
+    PesoAresta peso_original;
 
     if (grafo == NULL || operacoes == NULL || resultado == NULL ||
         *resultado != NULL) {
@@ -87,6 +93,10 @@ static StatusSimulacaoFalha simular_falha(
     }
     if (!conexao_existe) {
         return SIMULACAO_ARESTA_INEXISTENTE;
+    }
+    if (!operacoes->consultar_peso(grafo, vertice_origem, vertice_destino,
+                                   &peso_original)) {
+        return SIMULACAO_ARGUMENTO_INVALIDO;
     }
 
     simulacao = malloc(sizeof(*simulacao));
@@ -118,7 +128,8 @@ static StatusSimulacaoFalha simular_falha(
         grafo, &simulacao->componentes_depois);
     status = converter_status_componentes(status_componentes);
     if (status != SIMULACAO_SUCESSO) {
-        int restaurou = operacoes->inserir(grafo, vertice_origem, vertice_destino);
+        int restaurou = operacoes->restaurar(
+            grafo, vertice_origem, vertice_destino, &peso_original);
         liberar_resultado_simulacao(&simulacao);
         return restaurou ? status : SIMULACAO_FALHA_RESTAURACAO;
     }
@@ -145,7 +156,8 @@ static StatusSimulacaoFalha simular_falha(
 
     /* A conexao e recolocada antes do ultimo retrato. Na lista, essa etapa pode
      * alocar dois nos; uma falha e explicitada para nao fingir recuperacao. */
-    if (!operacoes->inserir(grafo, vertice_origem, vertice_destino)) {
+    if (!operacoes->restaurar(grafo, vertice_origem, vertice_destino,
+                              &peso_original)) {
         liberar_resultado_simulacao(&simulacao);
         return SIMULACAO_FALHA_RESTAURACAO;
     }
@@ -182,9 +194,21 @@ static int remover_lista(void *grafo, size_t origem, size_t destino)
     return remover_aresta_lista(grafo, origem, destino) == LISTA_SUCESSO;
 }
 
-static int inserir_lista(void *grafo, size_t origem, size_t destino)
+static int consultar_peso_lista(const void *grafo, size_t origem,
+                                size_t destino, PesoAresta *peso)
 {
-    return inserir_aresta_lista(grafo, origem, destino) == LISTA_SUCESSO;
+    return consultar_peso_aresta_lista(grafo, origem, destino, peso) ==
+           LISTA_SUCESSO;
+}
+
+static int restaurar_lista(void *grafo, size_t origem, size_t destino,
+                           const PesoAresta *peso)
+{
+    ResultadoLista status = peso->possui_peso
+        ? inserir_aresta_ponderada_lista(grafo, origem, destino, peso->valor,
+                                         peso->origem)
+        : inserir_aresta_lista(grafo, origem, destino);
+    return status == LISTA_SUCESSO;
 }
 
 static StatusComponentes componentes_lista(const void *grafo,
@@ -209,9 +233,21 @@ static int remover_matriz(void *grafo, size_t origem, size_t destino)
     return remover_aresta(grafo, origem, destino) == MATRIZ_SUCESSO;
 }
 
-static int inserir_matriz(void *grafo, size_t origem, size_t destino)
+static int consultar_peso_matriz(const void *grafo, size_t origem,
+                                 size_t destino, PesoAresta *peso)
 {
-    return inserir_aresta(grafo, origem, destino) == MATRIZ_SUCESSO;
+    return consultar_peso_aresta(grafo, origem, destino, peso) ==
+           MATRIZ_SUCESSO;
+}
+
+static int restaurar_matriz(void *grafo, size_t origem, size_t destino,
+                            const PesoAresta *peso)
+{
+    ResultadoMatriz status = peso->possui_peso
+        ? inserir_aresta_ponderada(grafo, origem, destino, peso->valor,
+                                   peso->origem)
+        : inserir_aresta(grafo, origem, destino);
+    return status == MATRIZ_SUCESSO;
 }
 
 static StatusComponentes componentes_matriz(const void *grafo,
@@ -221,12 +257,14 @@ static StatusComponentes componentes_matriz(const void *grafo,
 }
 
 static const OperacoesGrafo operacoes_lista = {
-    quantidade_lista, consultar_lista, remover_lista, inserir_lista,
+    quantidade_lista, consultar_lista, consultar_peso_lista, remover_lista,
+    restaurar_lista,
     componentes_lista
 };
 
 static const OperacoesGrafo operacoes_matriz = {
-    quantidade_matriz, consultar_matriz, remover_matriz, inserir_matriz,
+    quantidade_matriz, consultar_matriz, consultar_peso_matriz, remover_matriz,
+    restaurar_matriz,
     componentes_matriz
 };
 

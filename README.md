@@ -66,6 +66,7 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Desenvolvimento e testes](docs/development.md)
 - [Consolidação da Fase I](docs/fase-I.md)
 - [Resultados experimentais](docs/resultados-fase-I.md)
+- [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
 
-As funcionalidades de otimização (Dijkstra, Prim, Kruskal etc.) pertencem à
-Fase II e não fazem parte desta consolidação.
+A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
+custos assumidos; Dijkstra, Prim e Kruskal ainda não fazem parte desta etapa.
