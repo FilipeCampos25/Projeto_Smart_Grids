@@ -237,6 +237,12 @@ size_t indice_vizinho_lista(const VizinhoLista *vizinho)
     return vizinho == NULL ? SIZE_MAX : vizinho->indice;
 }
 
+PesoAresta peso_vizinho_lista(const VizinhoLista *vizinho)
+{
+    const PesoAresta sem_peso = {0, 0.0, ORIGEM_PESO_NAO_INFORMADA};
+    return vizinho == NULL ? sem_peso : vizinho->peso;
+}
+
 const VizinhoLista *proximo_vizinho_lista(const VizinhoLista *vizinho)
 {
     return vizinho == NULL ? NULL : vizinho->proximo;
