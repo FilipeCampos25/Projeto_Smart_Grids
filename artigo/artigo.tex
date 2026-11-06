@@ -1,0 +1,136 @@
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template}
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{svg}
+
+\graphicspath{{figuras/}}
+\sloppy
+
+\title{Análise Topológica e Otimização de Redes de Distribuição de Energia com Teoria dos Grafos: um Estudo Preliminar sobre a BDGD}
+
+% Autoria e afiliação não foram inferidas a partir do nome do repositório.
+% Substituir os campos abaixo somente com dados confirmados pelos autores.
+\author{[AUTOR(ES) A CONFIRMAR]}
+\address{[AFILIAÇÃO A CONFIRMAR]
+  \email{[E-MAIL A CONFIRMAR]}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This preliminary paper reports a graph-based topological analysis of a medium-voltage distribution network extracted from the Brazilian Geographic Database of Distribution Utilities. The FORCEL 2025 feeder cut contains 1,838 vertices and 1,837 active edges and is represented both by adjacency lists and matrices. Breadth-first search, depth-first search, and connected-components algorithms were evaluated on deterministic prefixes of 100, 500, and 1,000 vertices, with seven repetitions. For this sparse topology, lists required 40,192 bytes at 1,000 vertices, versus 1,000,024 bytes for the matrix; median BFS times were 0.0123 and 2.1894 ms, respectively. Dijkstra, Prim, Kruskal, exact backtracking, and a 2-approximation for Vertex Cover are present as C11 modules, but the Phase II experimental pipeline failed validation in the audited revision. Therefore, no Phase II performance result is claimed. The model supports topological reasoning only: it neither computes power flow nor turns assumed costs into measured electrical quantities.
+\end{abstract}
+
+\begin{resumo}
+Este artigo preliminar documenta a análise topológica, por Teoria dos Grafos, de uma rede de distribuição de média tensão extraída da Base de Dados Geográfica da Distribuidora. O recorte FORCEL 2025 contém 1.838 vértices e 1.837 arestas ativas, representados por lista e matriz de adjacência. Busca em largura, busca em profundidade e componentes conexos foram avaliados em prefixos determinísticos de 100, 500 e 1.000 vértices, com sete repetições. Na topologia esparsa, a lista ocupou 40.192 bytes em $N=1000$, contra 1.000.024 bytes da matriz; as medianas da busca em largura foram 0,0123 e 2,1894 ms, respectivamente. Dijkstra, Prim, Kruskal, Backtracking exato e aproximação 2 para Cobertura de Vértices existem como módulos C11, porém o protocolo experimental da Fase II falhou na validação da revisão auditada. Por isso, não se apresentam resultados de desempenho dessa fase. O modelo permite inferências topológicas, não fluxo de potência, e custos assumidos não são tratados como grandezas elétricas medidas.
+\end{resumo}
+
+\noindent\textbf{Palavras-chave:} Smart Grids; Teoria dos Grafos; BDGD; representação de grafos; otimização combinatória.
+
+\section{Introdução}
+
+Smart Grids combinam infraestrutura elétrica, automação, comunicação e processamento de dados para ampliar a observabilidade e o controle do sistema elétrico \cite{gungor2011}. Uma rede de distribuição também pode ser estudada como uma topologia: pontos de conexão tornam-se vértices e ligações ativas tornam-se arestas. Essa abstração permite responder perguntas de alcançabilidade, conectividade, caminhos, estruturas geradoras e cobertura, mas não substitui um modelo elétrico. Em particular, conectividade topológica não comprova fornecimento de energia, e a remoção de uma aresta não determina tensões, correntes, perdas ou capacidade de atendimento.
+
+O problema estudado é a construção e a avaliação de estruturas e algoritmos de grafos sobre um recorte real da Base de Dados Geográfica da Distribuidora (BDGD), publicada pela Agência Nacional de Energia Elétrica (ANEEL) \cite{aneelbdgd}. O projeto implementa em C11 duas representações da mesma rede e organiza o desenvolvimento em duas fases. A Fase I abrange carregamento, lista e matriz de adjacência, buscas, componentes conexos, simulação topológica de falha e medições comparativas. A Fase II acrescenta pesos, caminho mínimo, árvores geradoras mínimas e Cobertura de Vértices.
+
+As contribuições verificadas são: (i) normalização rastreável de um alimentador real; (ii) modelagem explícita de vértices, arestas e pesos ausentes; (iii) comparação experimental reproduzível entre lista e matriz na Fase I; e (iv) implementação modular de algoritmos da Fase II, acompanhada de testes isolados. A contribuição experimental da Fase II permanece pendente: na revisão auditada, a aplicação não compila pelo fluxo padrão e o gerador de experimentos de árvore geradora mínima (AGM) marca todas as medições como inválidas. Este texto, portanto, é deliberadamente preliminar.
+
+\section{Fundamentação teórica}
+
+Um grafo $G=(V,E)$ contém um conjunto de vértices $V$ e um conjunto de arestas $E$. No modelo principal, $G$ é simples e não direcionado. Uma lista de adjacência armazena, para cada vértice, apenas os vizinhos existentes e ocupa $O(|V|+|E|)$; uma matriz reserva uma célula para cada par e ocupa $O(|V|^2)$ \cite{cormen2022}. A lista tende a favorecer redes esparsas, enquanto a matriz permite consulta direta de adjacência.
+
+Busca em largura (BFS) e busca em profundidade (DFS) visitam uma componente em $O(|V|+|E|)$ sobre listas; com matriz, a inspeção das linhas eleva o custo para $O(|V|^2)$. Repetir uma busca a partir de vértices ainda não visitados identifica componentes conexos. No projeto, ``ilha'' significa apenas componente topologicamente separada da subestação, sem afirmar autossuficiência energética.
+
+Em grafos ponderados com pesos não negativos, Dijkstra determina caminhos de custo mínimo \cite{dijkstra1959}. A implementação usa heap binário na lista, com $O((|V|+|E|)\log |V|)$, e varredura na matriz, com $O(|V|^2)$. Prim e Kruskal resolvem AGM: Prim expande uma árvore a partir de candidatos incidentes \cite{prim1957}; Kruskal ordena arestas e une componentes por Union--Find \cite{kruskal1956}. A implementação auditada de Prim usa varredura de vértices, $O(|V|^2+|E|)$, e Kruskal usa $O(|E|\log |E|)$, acrescido de $O(|V|^2)$ para extrair arestas de uma matriz.
+
+Cobertura Mínima de Vértices procura um conjunto mínimo que contenha ao menos uma extremidade de cada aresta. A versão de decisão integra a classe de problemas NP-completos de Karp \cite{karp1972}. O Backtracking implementado ramifica sobre as extremidades de uma aresta ainda descoberta e aplica limites superior e inferior, mas conserva pior caso exponencial, apresentado no projeto como $O(2^{|V|}(|V|+|E|))$. Logo, não é adequado a instâncias gerais com milhares de vértices. A aproximação seleciona as duas extremidades de cada aresta de um matching maximal e satisfaz $|C|\leq 2|C^*|$ \cite{vazirani2001}.
+
+\section{Metodologia}
+
+\subsection{Dataset e modelagem}
+
+A BDGD representa de forma simplificada ativos e informações técnicas e comerciais das distribuidoras \cite{aneelbdgd}. O recorte versionado usa a distribuidora FORCEL, posição de 31/12/2025, circuito \texttt{1\_SFOR\_1} e subestação \texttt{SFOR}. Segmentos de média tensão (SSDMT) e chaves fechadas (UNSEMT) fornecem os extremos \texttt{PAC\_1} e \texttt{PAC\_2}. Ativos inativos, chaves abertas, laços, pares duplicados e componentes fora do ponto inicial são removidos.
+
+O resultado contém 1.838 vértices e 1.837 arestas: 1.533 segmentos e 304 chaves fechadas. Todos os segmentos possuem comprimento, totalizando 104.500,97 m; as chaves não possuem comprimento. O recorte é conexo e satisfaz $|E|=|V|-1$, portanto é uma árvore. Essa propriedade é consequência do recorte normalizado, não uma afirmação sobre toda a BDGD. Cada vértice representa um ponto de conexão (PAC), não necessariamente um equipamento, e transformadores não são incorporados pelo normalizador atual.
+
+A Fase I usa arestas não ponderadas. Na Fase II, comprimento medido é preservado quando disponível; ausência de peso é distinta de peso zero. Custos fornecidos para preencher lacunas recebem marca de \emph{custo assumido}, sem unidade física. Como a rede real é uma árvore, qualquer AGM contém todas as suas arestas e não demonstra escolha ótima entre alternativas. Por isso, grafos sintéticos conectados e cíclicos são necessários para testar caminhos alternativos e AGM; seus pesos permanecem abstratos.
+
+\subsection{Protocolo experimental e validação}
+
+Na Fase I, os tamanhos $N\in\{100,500,1000\}$ são prefixos da BFS determinística iniciada no ponto da subestação. Cada prefixo é conectado e possui $N-1$ arestas. BFS, DFS e componentes são executados sete vezes em lista e matriz; os CSVs preservam cada medição, e a análise utiliza a mediana. A memória é a quantidade solicitada pelas estruturas, não o RSS do processo nem a memória total da aplicação. Os CSVs não registram máquina, sistema e compilador da execução histórica, o que limita a reprodução estrita dos tempos.
+
+A auditoria de 6 de novembro de 2026 foi feita sobre o commit \texttt{37d417c}. Os testes isolados de Dijkstra e Cobertura de Vértices passaram, respectivamente, 46 e 192 verificações. O teste funcional de AGM apresentou uma falha em 127 verificações. O comando padrão \texttt{make test} não chegou à suíte porque \texttt{src/main.c} contém chamadas sem definição e o \texttt{Makefile} não vincula AGM. O executável experimental de AGM foi compilado isoladamente: o gerador determinístico passou, mas todas as 84 linhas produzidas receberam \texttt{ERRO\_VALIDACAO}. Tempos dessas linhas foram descartados, pois medir uma solução inválida não produz evidência científica aceitável. Também não há experimento versionado que compare Dijkstra ou as soluções exata e aproximada de Cobertura nas mesmas instâncias.
+
+\section{Implementação}
+
+O sistema é escrito em C11, sem biblioteca pronta de grafos. O carregador converte IDs textuais da BDGD em índices consecutivos e rejeita duplicatas, laços, extremos inexistentes, status não ativo e comprimentos negativos ou não finitos. Lista e matriz possuem APIs paralelas; a matriz armazena adjacência simétrica e a lista mantém duas incidências por aresta.
+
+Na Fase I, BFS usa fila, DFS usa pilha explícita e componentes reutilizam as travessias. A simulação de falha remove uma conexão e mede somente a separação topológica resultante. Algoritmos complementares verificam articulações, pontes, condições acadêmicas de Euler e coloração gulosa, mas não são interpretados como validação elétrica.
+
+Na Fase II, Dijkstra oferece políticas explícitas para rejeitar ou ignorar arestas sem peso; a interface pode ainda preparar uma cópia com custo assumido. Prim e Kruskal devolvem árvore ou floresta, custo e origem de cada peso. A Cobertura de Vértices possui Backtracking com interrupção por número de vértices ou nós explorados e uma aproximação 2 por matching maximal. Os módulos e testes existem, mas a integração não pode ser classificada como validada enquanto a compilação padrão, a falha unitária de AGM e o protocolo experimental não forem corrigidos.
+
+\section{Resultados e discussão}
+
+A Tabela~\ref{tab:tempo} reproduz medianas do CSV consolidado da Fase I. Em $N=1000$, a matriz levou de 2,1112 a 2,1927 ms, enquanto a lista permaneceu entre 0,0123 e 0,0154 ms. A diferença é coerente com a topologia esparsa e com a necessidade de examinar linhas inteiras da matriz. Não se deve generalizar esses valores para outras máquinas: são medições históricas sem metadados completos de ambiente.
+
+\begin{table}[ht]
+\centering
+\caption{Tempo mediano da Fase I em milissegundos (sete repetições).}
+\label{tab:tempo}
+\small
+\begin{tabular}{rrlrr}
+\toprule
+$N$ & $|E|$ & Algoritmo & Lista & Matriz \\
+\midrule
+100  & 99  & BFS         & 0,0011 & 0,0241 \\
+100  & 99  & DFS         & 0,0014 & 0,0235 \\
+100  & 99  & Componentes & 0,0016 & 0,0245 \\
+500  & 499 & BFS         & 0,0053 & 0,5538 \\
+500  & 499 & DFS         & 0,0065 & 0,5259 \\
+500  & 499 & Componentes & 0,0060 & 0,5519 \\
+1000 & 999 & BFS         & 0,0123 & 2,1894 \\
+1000 & 999 & DFS         & 0,0154 & 2,1112 \\
+1000 & 999 & Componentes & 0,0140 & 2,1927 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\includesvg[width=0.94\linewidth]{tempo_lista_matriz}
+\caption{Tempos medianos da Fase I, gerados pelo script versionado a partir de \texttt{fase1\_consolidado.csv}.}
+\label{fig:tempo}
+\end{figure}
+
+A memória reforça a mesma conclusão. Para $N=100$, lista e matriz solicitaram 4.224 e 10.024 bytes; em $N=500$, 20.096 e 250.024; em $N=1000$, 40.192 e 1.000.024. Na aplicação completa, as estimativas são 75.200 e 3.378.268 bytes. O crescimento aproximadamente linear da lista acompanha $|E|=|V|-1$, enquanto o da matriz é quadrático. Os números medem estruturas e não incluem pilha, metadados do alocador ou demais objetos.
+
+\begin{figure}[ht]
+\centering
+\includesvg[width=0.94\linewidth]{memoria_lista_matriz}
+\caption{Memória estrutural estimada a partir do CSV real da Fase I.}
+\label{fig:memoria}
+\end{figure}
+
+Não há comparação válida de desempenho entre Prim e Kruskal na revisão auditada, embora os quatro resultados por instância tenham apresentado o mesmo custo antes de falhar a validação. Publicar esses tempos ocultaria uma inconsistência do próprio protocolo. De modo semelhante, não há CSV real para comparar Backtracking e aproximação. Os testes pequenos sustentam apenas correção em casos conhecidos; não sustentam escalabilidade. No dataset completo, o limite padrão impede o Backtracking antes da busca, enquanto a aproximação pode ser executada, mas uma cardinalidade isolada não mede razão de aproximação sem uma solução ótima na mesma instância.
+
+As principais ameaças à validade são: seleção de apenas um alimentador; remoção deliberada de componentes fora da raiz; rede real acíclica; ausência de comprimento nas chaves; inexistência de resistência, impedância, bitola, tensão e demanda no modelo carregado; custos sintéticos sem unidade; metadados incompletos da Fase I; e integração quebrada da Fase II. Assim, AGM indica otimização combinatória de pesos, não projeto elétrico, e Cobertura de Vértices indica incidência topológica, não observabilidade elétrica.
+
+\section{Conclusão}
+
+O recorte real confirma que uma representação esparsa é mais adequada ao estudo executado: para $N=1000$, a lista usou cerca de 4\% da memória estrutural da matriz e apresentou tempos medianos substancialmente menores nas três rotinas da Fase I. O resultado é compatível com as complexidades das representações e com uma árvore de $N-1$ arestas.
+
+Os algoritmos de caminhos mínimos, AGM e Cobertura de Vértices estão materializados em C11, mas a evidência disponível não permite declarar a Fase II concluída. Trabalhos futuros imediatos são restaurar a compilação e os alvos do \texttt{Makefile}, corrigir a falha de AGM e seu validador, registrar ambiente completo, gerar CSVs válidos e comparar Backtracking e aproximação em instâncias pequenas conhecidas. Estudos posteriores devem incorporar atributos elétricos e ferramentas próprias de fluxo de potência. Até essas etapas, o artigo permanece preliminar e a issue não deve ser encerrada como entrega final.
+
+\bibliographystyle{sbc}
+\bibliography{referencias}
+
+\end{document}
