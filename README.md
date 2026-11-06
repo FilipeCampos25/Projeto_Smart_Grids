@@ -17,6 +17,7 @@ Dijkstra sobre pesos explícitos da Fase II.
   para arestas sem peso e indicação de custos assumidos.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
+- Prim e Kruskal calculam árvore ou floresta geradora mínima em Lista e Matriz.
 
 “Ilha” significa somente uma componente topológica fora da componente da
 subestação. O projeto não afirma autossuficiência energética e não calcula

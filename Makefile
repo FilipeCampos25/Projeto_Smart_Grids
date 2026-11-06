@@ -41,7 +41,7 @@ TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 
 .PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-dijkstra test-falhas experimentos sanitize
 
-all: app $(TESTES)
+all: app $(TESTES) $(EXPERIMENTOS_FASE2)
 app: $(BUILD_DIR)/smart_grid$(EXT)
 
 $(BUILD_DIR) resultados:
@@ -127,6 +127,7 @@ $(BUILD_DIR)/teste_dijkstra_falhas$(EXT): tests/test_dijkstra.c $(GRAFOS) $(BUIL
 
 test: all
 	$(foreach t,$(TESTES),$(call EXECUTAR,$(t))$(newline))
+	$(MAKE) test-experimentos-fase2
 
 define newline
 
