@@ -1,6 +1,7 @@
 #include "algoritmos_complementares.h"
 #include "bfs.h"
 #include "componentes_conexos.h"
+#include "cobertura_vertices.h"
 #include "dataset.h"
 #include "dijkstra.h"
 #include "dfs.h"
@@ -8,6 +9,8 @@
 #include "simulacao_falha.h"
 
 #include <math.h>
+#include <errno.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +66,20 @@ static int ler_custo(double *custo)
     if (fim == linha || *fim != '\0' || !isfinite(valor) || valor < 0.0)
         return 0;
     *custo = valor;
+    return 1;
+}
+
+static int ler_limite_positivo(size_t *limite)
+{
+    char linha[128];
+    char *fim;
+    unsigned long long valor;
+    if (limite == NULL || !ler_texto(linha, sizeof(linha))) return 0;
+    errno = 0;
+    valor = strtoull(linha, &fim, 10);
+    if (errno != 0 || fim == linha || *fim != '\0' || valor == 0 ||
+        valor > SIZE_MAX) return 0;
+    *limite = (size_t)valor;
     return 1;
 }
 
@@ -308,6 +325,123 @@ static void executar_dijkstra_cli(Aplicacao *app)
     destruir_matriz(&matriz);
 }
 
+static void exibir_cobertura(const Aplicacao *app, const char *algoritmo,
+                             StatusCoberturaVertices status,
+                             const ResultadoCoberturaVertices *resultado,
+                             double tempo_ms)
+{
+    size_t memoria_grafo = app->representacao == REPRESENTACAO_LISTA ?
+        memoria_lista(app->lista) : memoria_matriz(app->matriz);
+    printf("\nAlgoritmo: %s\nStatus: %s\n", algoritmo,
+           descricao_status_cobertura(status));
+    if (resultado == NULL) return;
+    printf("Quantidade de vertices selecionados: %zu\n",
+           resultado->cardinalidade);
+    printf("Garantia do resultado: %s\n",
+           resultado->metodo == COBERTURA_METODO_APROXIMADO ?
+               "aproximacao de fator 2" :
+           resultado->otima_comprovada ? "otimo comprovado" :
+                                         "INCOMPLETO; otimalidade nao comprovada");
+    printf("Vertices da cobertura: ");
+    if (resultado->cardinalidade == 0) {
+        printf("(nenhum)");
+    } else {
+        int primeiro = 1;
+        for (size_t i = 0; i < resultado->quantidade_vertices_grafo; i++) {
+            if (resultado->selecionados[i]) {
+                printf("%s%s", primeiro ? "" : ", ",
+                       app->dataset->vertices[i].id_externo);
+                primeiro = 0;
+            }
+        }
+    }
+    printf("\nTempo: %.6f ms\n", tempo_ms);
+    printf("Memoria estimada - estrutura do grafo: %zu bytes; "
+           "resultado: %zu bytes; auxiliar do algoritmo (pico): %zu bytes\n",
+           memoria_grafo, resultado->memoria_resultado_bytes,
+           resultado->memoria_auxiliar_pico_bytes);
+    if (resultado->metodo == COBERTURA_METODO_EXATO)
+        printf("Nos de Backtracking explorados: %zu\n",
+               resultado->nos_explorados);
+}
+
+static StatusCoberturaVertices executar_cobertura_metodo(
+    Aplicacao *app, int exato, const ConfiguracaoCoberturaExata *configuracao,
+    ResultadoCoberturaVertices **resultado, double *tempo_ms)
+{
+    StatusCoberturaVertices status;
+    double inicio = tempo_atual_milissegundos();
+    if (exato) {
+        status = app->representacao == REPRESENTACAO_LISTA ?
+            cobertura_vertices_exata_lista(app->lista, configuracao, resultado) :
+            cobertura_vertices_exata_matriz(app->matriz, configuracao, resultado);
+    } else {
+        status = app->representacao == REPRESENTACAO_LISTA ?
+            cobertura_vertices_aproximada_lista(app->lista, resultado) :
+            cobertura_vertices_aproximada_matriz(app->matriz, resultado);
+    }
+    *tempo_ms = tempo_atual_milissegundos() - inicio;
+    return status;
+}
+
+static void executar_cobertura_cli(Aplicacao *app)
+{
+    int modo;
+    ConfiguracaoCoberturaExata configuracao =
+        configuracao_cobertura_exata_padrao();
+    ResultadoCoberturaVertices *exata = NULL;
+    ResultadoCoberturaVertices *aproximada = NULL;
+    StatusCoberturaVertices status_exato = COBERTURA_ARGUMENTO_INVALIDO;
+    StatusCoberturaVertices status_aproximado = COBERTURA_ARGUMENTO_INVALIDO;
+    double tempo_exato = 0.0;
+    double tempo_aproximado = 0.0;
+
+    printf("Cobertura de Vertices: 1-aproximada, 2-exata, 3-ambas: ");
+    modo = ler_opcao();
+    if (modo < 1 || modo > 3) {
+        puts("Metodo invalido.");
+        return;
+    }
+    if (modo == 2 || modo == 3) {
+        printf("AVISO: o metodo exato e exponencial. Limite de vertices "
+               "(valor seguro sugerido: %zu): ",
+               configuracao.maximo_vertices);
+        if (!ler_limite_positivo(&configuracao.maximo_vertices)) {
+            puts("Limite de vertices invalido.");
+            return;
+        }
+        printf("Limite de nos explorados (valor seguro sugerido: %zu): ",
+               configuracao.maximo_nos_explorados);
+        if (!ler_limite_positivo(&configuracao.maximo_nos_explorados)) {
+            puts("Limite de nos invalido.");
+            return;
+        }
+    }
+    if (modo == 1 || modo == 3) {
+        status_aproximado = executar_cobertura_metodo(
+            app, 0, NULL, &aproximada, &tempo_aproximado);
+        exibir_cobertura(app, "Aproximacao por matching maximal",
+                         status_aproximado, aproximada, tempo_aproximado);
+    }
+    if (modo == 2 || modo == 3) {
+        status_exato = executar_cobertura_metodo(
+            app, 1, &configuracao, &exata, &tempo_exato);
+        exibir_cobertura(app, "Backtracking exato", status_exato, exata,
+                         tempo_exato);
+    }
+    if (modo == 3 && aproximada != NULL && exata != NULL) {
+        size_t diferenca = aproximada->cardinalidade - exata->cardinalidade;
+        printf("\nDiferenca de cardinalidade (aproximada - exata): %zu\n",
+               diferenca);
+        if (!exata->otima_comprovada)
+            puts("Comparacao inconclusiva quanto ao gap otimo: a execucao "
+                 "exata foi interrompida e sua cobertura e apenas a melhor "
+                 "solucao viavel encontrada.");
+    }
+    liberar_resultado_cobertura(&exata);
+    liberar_resultado_cobertura(&aproximada);
+}
+
 static int executar_demo(Aplicacao *app)
 {
     puts("DEMONSTRACAO AUTOMATICA");
@@ -331,6 +465,7 @@ static void menu(Aplicacao *app)
                "4 - Identificar componentes conexos\n5 - Simular falha real\n"
                "6 - Mostrar ultima metrica\n7 - Exportar simulacao Graphviz\n"
                "8 - Algoritmos complementares\n9 - Caminho minimo (Dijkstra)\n"
+               "10 - Cobertura minima de vertices\n"
                "0 - Sair\nOpcao: ",
                app->dataset->quantidade_vertices, app->dataset->quantidade_arestas,
                app->dataset->vertices[app->dataset->indice_subestacao].subestacao,
@@ -353,6 +488,7 @@ static void menu(Aplicacao *app)
         case 7: simular_falha(app, 1); break;
         case 8: executar_complementares(app); break;
         case 9: executar_dijkstra_cli(app); break;
+        case 10: executar_cobertura_cli(app); break;
         case 0: break;
         default: puts("Opcao invalida; informe um numero do menu.");
         }

@@ -18,6 +18,8 @@ Dijkstra sobre pesos explícitos da Fase II.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
 - Prim e Kruskal calculam árvore ou floresta geradora mínima em Lista e Matriz.
+- Cobertura de Vértices possui Backtracking exato com interrupção segura e
+  aproximação 2 executável no dataset completo.
 
 “Ilha” significa somente uma componente topológica fora da componente da
 subestação. O projeto não afirma autossuficiência energética e não calcula
@@ -53,8 +55,9 @@ build/smart_grid --demo
 
 ## CLI
 
-O menu alterna Lista/Matriz, executa BFS, DFS, componentes e Dijkstra, simula a
-falha real, mostra métricas, exporta DOT e apresenta algoritmos complementares.
+O menu alterna Lista/Matriz, executa BFS, DFS, componentes, Dijkstra e Cobertura
+de Vértices, simula a falha real, mostra métricas, exporta DOT e apresenta
+algoritmos complementares.
 Entradas inválidas são rejeitadas sem encerrar a aplicação.
 
 No Dijkstra, origem e destino são informados pelos IDs externos do dataset. O
@@ -77,7 +80,7 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
 - [Dijkstra: contratos, política de pesos e complexidade](docs/dijkstra.md)
+- [Cobertura de Vértices: algoritmos, garantias e limites](docs/cobertura-vertices.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
-custos assumidos. Dijkstra está disponível; Prim e Kruskal ainda não foram
-implementados.
+custos assumidos. Dijkstra, Prim e Kruskal estão disponíveis.
