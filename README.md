@@ -69,7 +69,13 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
 - [Árvore/Floresta Geradora Mínima](docs/agm.md)
+- [Protocolo experimental da Fase II](docs/experimentos-fase-II.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
 custos assumidos; Prim e Kruskal preservam essa origem nos resultados. Dijkstra
 permanece fora do escopo atual.
+
+Os experimentos comparativos de AGM podem ser executados sem alterar os
+resultados históricos da Fase I: `make experimentos-fase2`. Esse protocolo
+registra as dependências Dijkstra e Cobertura de Vértices que ainda não estão
+implementadas no workspace.

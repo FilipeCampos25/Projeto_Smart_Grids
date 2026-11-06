@@ -26,6 +26,9 @@ COMPLEMENTARES = src/algoritmos_complementares.c
 AGM = src/agm.c
 DATASET = src/dataset.c
 APP_FONTES = src/main.c src/metricas.c $(DATASET) $(GRAFOS) $(TRAVESSIAS) $(SIMULACAO) $(COMPLEMENTARES) $(AGM)
+EXPERIMENTOS_FASE2 = $(BUILD_DIR)/experimentos_fase2$(EXT)
+REPETICOES_FASE2 ?= 7
+SEMENTE_FASE2 ?= 20261106
 
 TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 	$(BUILD_DIR)/teste_alocacao$(EXT) \
@@ -39,9 +42,9 @@ TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 	$(BUILD_DIR)/teste_metricas$(EXT) $(BUILD_DIR)/teste_pesos$(EXT) \
 	$(BUILD_DIR)/teste_agm$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 
-.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-agm test-falhas experimentos sanitize
+.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-agm test-falhas experimentos experimentos-fase2 test-experimentos-fase2 sanitize
 
-all: app $(TESTES)
+all: app $(TESTES) $(EXPERIMENTOS_FASE2)
 app: $(BUILD_DIR)/smart_grid$(EXT)
 
 $(BUILD_DIR) resultados:
@@ -125,8 +128,15 @@ $(BUILD_DIR)/agm_falhas.o: $(AGM) tests/alocacao_teste.h | $(BUILD_DIR)
 $(BUILD_DIR)/teste_agm_falhas$(EXT): tests/test_agm_falhas.c $(GRAFOS) $(BUILD_DIR)/agm_falhas.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -lm -o $@
 
+$(BUILD_DIR)/agm_experimento.o: $(AGM) src/benchmark_alocacao.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include src/benchmark_alocacao.h -Dmalloc=benchmark_malloc -Dfree=benchmark_free -c $(AGM) -o $@
+
+$(EXPERIMENTOS_FASE2): src/experimentos_fase2.c src/benchmark_alocacao.c $(GRAFOS) $(BUILD_DIR)/agm_experimento.o | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -lm -o $@
+
 test: all
 	$(foreach t,$(TESTES),$(call EXECUTAR,$(t))$(newline))
+	$(MAKE) test-experimentos-fase2
 
 define newline
 
@@ -152,6 +162,14 @@ test-complementares: $(BUILD_DIR)/teste_algoritmos_complementares$(EXT)
 test-agm: $(BUILD_DIR)/teste_agm$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 	$(call EXECUTAR,$(word 1,$^))
 	$(call EXECUTAR,$(word 2,$^))
+test-experimentos-fase2: $(EXPERIMENTOS_FASE2)
+	$(call EXECUTAR,$<) --validar-gerador
+	$(call EXECUTAR,$<) --saida "$(BUILD_DIR)/fase2_teste_bruto.csv" --ambiente "$(BUILD_DIR)/fase2_teste_ambiente.txt" --repeticoes 1 --semente 20261106
+	$(PYTHON) scripts/analisar_experimentos_fase2.py --entrada "$(BUILD_DIR)/fase2_teste_bruto.csv" --diretorio "$(BUILD_DIR)"
+	$(PYTHON) tests/test_experimentos_fase2.py --runner "$(EXPERIMENTOS_FASE2)"
+experimentos-fase2: $(EXPERIMENTOS_FASE2) | resultados
+	$(call EXECUTAR,$<) --saida resultados/fase2_bruto.csv --ambiente resultados/fase2_ambiente.txt --repeticoes $(REPETICOES_FASE2) --semente $(SEMENTE_FASE2)
+	$(PYTHON) scripts/analisar_experimentos_fase2.py --entrada resultados/fase2_bruto.csv --diretorio resultados
 test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT) $(BUILD_DIR)/teste_simulacao_falhas$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 	$(foreach t,$^,$(call EXECUTAR,$(t))$(newline))
 

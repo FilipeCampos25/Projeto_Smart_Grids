@@ -17,6 +17,8 @@ make test-real       # integração com 1.838 vértices
 make test-complementares
 make test-simulacao
 make experimentos    # 126 linhas de medição em CSV
+make experimentos-fase2 # AGM sintética, CSV e gráficos independentes da Fase I
+make test-experimentos-fase2 # reprodutibilidade do gerador e testes do analisador
 make sanitize        # ASan/UBSan quando a toolchain oferecer os runtimes
 ```
 
