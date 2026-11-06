@@ -50,7 +50,7 @@ $(BUILD_DIR) resultados:
 	$(CRIAR_DIRETORIO)
 
 $(BUILD_DIR)/smart_grid$(EXT): $(APP_FONTES) | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(APP_FONTES) $(LDFLAGS) $(LDLIBS) -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(APP_FONTES) $(LDFLAGS) $(LDLIBS) -lm -o $@
 
 $(BUILD_DIR)/teste_matriz_adjacencia$(EXT): src/matriz_adjacencia.c tests/teste_matriz_adjacencia.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -o $@

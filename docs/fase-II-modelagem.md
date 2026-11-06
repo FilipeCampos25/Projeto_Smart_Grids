@@ -94,6 +94,15 @@ Prim e Kruskal estao implementados em `include/agm.h` e `src/agm.c`; contratos,
 complexidades, politica para pesos ausentes, exemplos e validacoes estao em
 [docs/agm.md](./agm.md).
 
+Na CLI, a opcao 10 solicita algoritmo, representacao e politica para os pesos
+faltantes. Manter esses pesos ausentes preserva os dados e faz a AGM retornar
+`AGM_PESO_AUSENTE`; atribuir custo assumido requer entrada explicita do usuario.
+Quando a solucao seleciona pesos das duas origens, o aplicativo apresenta a
+soma numerica com aviso de unidades heterogeneas e informa subtotais separados.
+A opcao 9 informa as dependencias ainda indisponiveis. O modo `--demo` tambem
+usa um ciclo pequeno com pesos assumidos para demonstrar as quatro combinacoes
+de algoritmo e representacao sem alterar o dataset real.
+
 ## Limitacoes para algoritmos futuros
 
 - Dijkstra ainda deve definir sua politica para arestas sem peso; nao deve

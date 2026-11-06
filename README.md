@@ -3,8 +3,8 @@
 Aplicação acadêmica em C para analisar topologia e conectividade de uma rede
 real de distribuição de energia. O projeto carrega um recorte da BDGD/ANEEL,
 constrói a mesma topologia como Lista e Matriz de Adjacência e executa BFS,
-DFS, componentes conexos, uma simulação de falha com ilhas topológicas e
-Dijkstra sobre pesos explícitos da Fase II.
+DFS, componentes conexos, simulação de falha e, para grafos ponderados, Prim e
+Kruskal.
 
 ## Estado atual
 
@@ -27,7 +27,8 @@ fluxo de potência.
 
 ## Compilar e executar
 
-É necessário um compilador C11 e GNU Make. Em Linux/macOS:
+É necessário um compilador C11 e GNU Make. Python 3 também é necessário para
+`make test`, os testes da CLI e os relatórios experimentais. Em Linux/macOS:
 
 ```sh
 make
@@ -36,6 +37,7 @@ make test
 make test-real
 make experimentos
 python scripts/gerar_graficos.py
+make experimentos-fase2
 ```
 
 No Windows com LLVM-MinGW/MinGW:
@@ -52,6 +54,17 @@ demonstração não interativa completa:
 ```sh
 build/smart_grid --demo
 ```
+
+Comandos de consulta:
+
+```sh
+build/smart_grid --help
+build/smart_grid --experimentos
+```
+
+`--experimentos` continua sendo o modo de experimentos históricos da Fase I.
+`make experimentos-fase2` executa separadamente as comparações de AGM e gera
+os CSVs/SVGs documentados em `docs/experimentos-fase-II.md`.
 
 ## CLI
 
