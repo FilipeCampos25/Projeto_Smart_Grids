@@ -2,10 +2,12 @@
 #include "bfs.h"
 #include "componentes_conexos.h"
 #include "dataset.h"
+#include "dijkstra.h"
 #include "dfs.h"
 #include "metricas.h"
 #include "simulacao_falha.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +40,30 @@ static int ler_opcao(void)
         return -1;
     }
     return (int)valor;
+}
+
+static int ler_texto(char *texto, size_t capacidade)
+{
+    size_t tamanho;
+    if (texto == NULL || capacidade == 0 || fgets(texto, capacidade, stdin) == NULL)
+        return 0;
+    tamanho = strlen(texto);
+    if (tamanho != 0 && texto[tamanho - 1] == '\n') texto[--tamanho] = '\0';
+    if (tamanho != 0 && texto[tamanho - 1] == '\r') texto[--tamanho] = '\0';
+    return tamanho != 0;
+}
+
+static int ler_custo(double *custo)
+{
+    char linha[128];
+    char *fim;
+    double valor;
+    if (custo == NULL || !ler_texto(linha, sizeof(linha))) return 0;
+    valor = strtod(linha, &fim);
+    if (fim == linha || *fim != '\0' || !isfinite(valor) || valor < 0.0)
+        return 0;
+    *custo = valor;
+    return 1;
 }
 
 static const char *nome_representacao(Representacao representacao)
@@ -184,6 +210,104 @@ static void executar_complementares(Aplicacao *app)
     liberar_resultado_coloracao(&coloracao);
 }
 
+static void executar_dijkstra_cli(Aplicacao *app)
+{
+    char id_origem[256];
+    char id_destino[256];
+    size_t origem, destino;
+    int modo;
+    ConfiguracaoPesosDataset configuracao = {
+        PESO_AUSENTE_MANTER_SEM_PESO, 0.0
+    };
+    PoliticaPesoDijkstra politica = DIJKSTRA_REJEITAR_ARESTA_SEM_PESO;
+    GrafoLista *lista = NULL;
+    MatrizAdjacencia *matriz = NULL;
+    ResultadoDijkstra *resultado = NULL;
+    StatusDataset status_dataset;
+    StatusDijkstra status;
+    double inicio;
+
+    printf("ID externo de origem: ");
+    if (!ler_texto(id_origem, sizeof(id_origem)) ||
+        !buscar_indice_dataset(app->dataset, id_origem, &origem)) {
+        puts("Vertice de origem inexistente no dataset.");
+        return;
+    }
+    printf("ID externo de destino: ");
+    if (!ler_texto(id_destino, sizeof(id_destino)) ||
+        !buscar_indice_dataset(app->dataset, id_destino, &destino)) {
+        puts("Vertice de destino inexistente no dataset.");
+        return;
+    }
+    printf("Arestas sem comprimento: 1-rejeitar grafo, 2-ignorar arestas, "
+           "3-usar custo assumido: ");
+    modo = ler_opcao();
+    if (modo == 2) {
+        politica = DIJKSTRA_IGNORAR_ARESTA_SEM_PESO;
+    } else if (modo == 3) {
+        configuracao.modo_peso_ausente = PESO_AUSENTE_USAR_CUSTO_ASSUMIDO;
+        printf("Custo abstrato assumido (finito e >= 0): ");
+        if (!ler_custo(&configuracao.custo_assumido)) {
+            puts("Custo assumido invalido.");
+            return;
+        }
+    } else if (modo != 1) {
+        puts("Modo de peso invalido.");
+        return;
+    }
+
+    inicio = tempo_atual_milissegundos();
+    if (app->representacao == REPRESENTACAO_LISTA) {
+        status_dataset = construir_lista_ponderada_dataset(
+            app->dataset, &configuracao, &lista);
+        if (status_dataset == DATASET_SUCESSO)
+            status = executar_dijkstra_lista(lista, origem, destino, politica,
+                                              &resultado);
+        else
+            status = DIJKSTRA_ERRO_GRAFO;
+    } else {
+        status_dataset = construir_matriz_ponderada_dataset(
+            app->dataset, &configuracao, &matriz);
+        if (status_dataset == DATASET_SUCESSO)
+            status = executar_dijkstra_matriz(matriz, origem, destino, politica,
+                                               &resultado);
+        else
+            status = DIJKSTRA_ERRO_GRAFO;
+    }
+    if (status_dataset != DATASET_SUCESSO) {
+        printf("Falha ao construir grafo ponderado: %s\n",
+               descricao_status_dataset(status_dataset));
+    } else if (status != DIJKSTRA_SUCESSO) {
+        printf("Dijkstra nao executado: %s.\n",
+               descricao_status_dijkstra(status));
+    } else if (!resultado->alcancavel) {
+        printf("Destino inalcançavel. Vertices processados: %zu.\n",
+               resultado->quantidade_vertices_processados);
+    } else {
+        printf("Caminho (%zu vertices): ",
+               resultado->quantidade_vertices_caminho);
+        for (size_t i = 0; i < resultado->quantidade_vertices_caminho; i++) {
+            if (i != 0) printf(" -> ");
+            printf("%s", app->dataset->vertices[resultado->caminho[i]].id_externo);
+        }
+        printf("\nCusto acumulado: %.6f\nVertices processados: %zu\n",
+               resultado->custo_total,
+               resultado->quantidade_vertices_processados);
+        if (resultado->utiliza_custo_assumido) {
+            puts("CENARIO ABSTRATO: o custo inclui valor assumido e nao "
+                 "representa distancia fisica real em metros.");
+        } else {
+            puts("O caminho usa somente comprimentos medidos; custo em metros.");
+        }
+    }
+    if (status_dataset == DATASET_SUCESSO)
+        printf("Tempo total (construcao + Dijkstra): %.6f ms\n",
+               tempo_atual_milissegundos() - inicio);
+    liberar_resultado_dijkstra(&resultado);
+    liberar_grafo_lista(lista);
+    destruir_matriz(&matriz);
+}
+
 static int executar_demo(Aplicacao *app)
 {
     puts("DEMONSTRACAO AUTOMATICA");
@@ -199,14 +323,15 @@ static void menu(Aplicacao *app)
 {
     int opcao = -1;
     while (opcao != 0) {
-        printf("\n========================================\n SMART GRID - FASE I\n"
+        printf("\n========================================\n SMART GRID - FASE I E II\n"
                "========================================\n"
                "Dataset: %zu vertices, %zu arestas\nSubestacao: %s (%s)\n"
                "Representacao atual: [%s]\n\n"
                "1 - Alterar representacao\n2 - Executar BFS\n3 - Executar DFS\n"
                "4 - Identificar componentes conexos\n5 - Simular falha real\n"
                "6 - Mostrar ultima metrica\n7 - Exportar simulacao Graphviz\n"
-               "8 - Algoritmos complementares\n0 - Sair\nOpcao: ",
+               "8 - Algoritmos complementares\n9 - Caminho minimo (Dijkstra)\n"
+               "0 - Sair\nOpcao: ",
                app->dataset->quantidade_vertices, app->dataset->quantidade_arestas,
                app->dataset->vertices[app->dataset->indice_subestacao].subestacao,
                app->dataset->vertices[app->dataset->indice_subestacao].id_externo,
@@ -227,6 +352,7 @@ static void menu(Aplicacao *app)
             break;
         case 7: simular_falha(app, 1); break;
         case 8: executar_complementares(app); break;
+        case 9: executar_dijkstra_cli(app); break;
         case 0: break;
         default: puts("Opcao invalida; informe um numero do menu.");
         }
