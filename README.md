@@ -18,10 +18,8 @@ Kruskal.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
 - Prim e Kruskal calculam árvore ou floresta geradora mínima em Lista e Matriz.
-- Dijkstra e Cobertura de Vértices (exata/aproximativa) ainda não existem neste
-  workspace e não são oferecidos como operações executáveis.
-- Os experimentos da Fase II disponíveis comparam Prim/Kruskal em instâncias
-  sintéticas. Experimentos de Dijkstra e Cobertura aguardam as implementações.
+- Cobertura de Vértices possui Backtracking exato com interrupção segura e
+  aproximação 2 executável no dataset completo.
 
 “Ilha” significa somente uma componente topológica fora da componente da
 subestação. O projeto não afirma autossuficiência energética e não calcula
@@ -70,28 +68,10 @@ os CSVs/SVGs documentados em `docs/experimentos-fase-II.md`.
 
 ## CLI
 
-O menu alterna Lista/Matriz, executa BFS, DFS e componentes, simula a falha
-real, mostra métricas, exporta DOT e apresenta os algoritmos complementares.
-As opções 9 e 10 informam o estado das dependências da Fase II e executam
-Prim/Kruskal sobre o dataset, respectivamente. Na opção 10, selecione
-algoritmo, representação e política para as 304 arestas sem comprimento:
-
-- manter sem peso preserva os dados; a AGM recusa a entrada, sem inferir custo;
-- informar custo assumido requer um valor explícito, inclusive zero. Esse valor
-  é abstrato e não é comparável diretamente aos comprimentos medidos em metros.
-
-O resultado informa se é árvore ou floresta, mostra a origem dos pesos,
-apresenta subtotais separados quando há custos assumidos e limita a listagem
-de arestas no dataset real. Entradas inválidas, EOF e opções desconhecidas são
-tratados sem travar o menu.
-
-`--demo` executa BFS, DFS, componentes e simulação de falha nas duas
-representações, além de uma AGM num ciclo sintético ponderado. Nesse ciclo,
-Prim e Kruskal, em Lista e Matriz, retornam três arestas e custo mínimo
-numérico 4 (valores assumidos abstratos). Dijkstra e Cobertura de Vértices
-aparecem como dependências pendentes, sem produzir resultados simulados.
-
-Roteiro da apresentação: [docs/roteiro-demonstracao.md](docs/roteiro-demonstracao.md).
+O menu alterna Lista/Matriz, executa BFS, DFS, componentes, Dijkstra e Cobertura
+de Vértices, simula a falha real, mostra métricas, exporta DOT e apresenta
+algoritmos complementares.
+Entradas inválidas são rejeitadas sem encerrar a aplicação.
 
 No Dijkstra, origem e destino são informados pelos IDs externos do dataset. O
 usuário escolhe rejeitar ou ignorar conexões sem comprimento, ou fornecer um
@@ -113,11 +93,7 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
 - [Dijkstra: contratos, política de pesos e complexidade](docs/dijkstra.md)
+- [Cobertura de Vértices: algoritmos, garantias e limites](docs/cobertura-vertices.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
-custos assumidos; Prim e Kruskal preservam essa origem nos resultados.
-
-Os experimentos comparativos de AGM podem ser executados sem alterar os
-resultados históricos da Fase I: `make experimentos-fase2`. Esse protocolo
-registra as dependências Dijkstra e Cobertura de Vértices que ainda não estão
-implementadas no workspace.
+custos assumidos. Dijkstra, Prim e Kruskal estão disponíveis.
