@@ -3,6 +3,7 @@
 #include "bfs.h"
 #include "componentes_conexos.h"
 #include "dataset.h"
+#include "dijkstra.h"
 #include "dfs.h"
 #include "metricas.h"
 #include "simulacao_falha.h"
@@ -98,6 +99,30 @@ static int ler_double_nao_negativo(const char *prompt, double *valor)
         return -1;
     }
     *valor = convertido;
+    return 1;
+}
+
+static int ler_texto(char *texto, size_t capacidade)
+{
+    size_t tamanho;
+    if (texto == NULL || capacidade == 0 || fgets(texto, capacidade, stdin) == NULL)
+        return 0;
+    tamanho = strlen(texto);
+    if (tamanho != 0 && texto[tamanho - 1] == '\n') texto[--tamanho] = '\0';
+    if (tamanho != 0 && texto[tamanho - 1] == '\r') texto[--tamanho] = '\0';
+    return tamanho != 0;
+}
+
+static int ler_custo(double *custo)
+{
+    char linha[128];
+    char *fim;
+    double valor;
+    if (custo == NULL || !ler_texto(linha, sizeof(linha))) return 0;
+    valor = strtod(linha, &fim);
+    if (fim == linha || *fim != '\0' || !isfinite(valor) || valor < 0.0)
+        return 0;
+    *custo = valor;
     return 1;
 }
 

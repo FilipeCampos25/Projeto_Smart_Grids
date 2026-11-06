@@ -13,6 +13,8 @@ Kruskal.
 - Subestação `SFOR`, origem externa `1_SFOR_1`.
 - Lista e Matriz validadas semanticamente sobre os mesmos dados.
 - CLI, medições, experimentos N=100/500/1000, CSVs e gráficos disponíveis.
+- Dijkstra em Lista (heap binário) e Matriz (varredura), com política explícita
+  para arestas sem peso e indicação de custos assumidos.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
 - Prim e Kruskal calculam árvore ou floresta geradora mínima em Lista e Matriz.
@@ -91,6 +93,11 @@ aparecem como dependências pendentes, sem produzir resultados simulados.
 
 Roteiro da apresentação: [docs/roteiro-demonstracao.md](docs/roteiro-demonstracao.md).
 
+No Dijkstra, origem e destino são informados pelos IDs externos do dataset. O
+usuário escolhe rejeitar ou ignorar conexões sem comprimento, ou fornecer um
+custo assumido. Resultados que usam custo assumido são identificados como
+cenários abstratos, não como distância física real em metros.
+
 O arquivo DOT pode ser convertido opcionalmente, sem afetar os algoritmos:
 
 ```sh
@@ -105,8 +112,7 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Consolidação da Fase I](docs/fase-I.md)
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
-- [Árvore/Floresta Geradora Mínima](docs/agm.md)
-- [Protocolo experimental da Fase II](docs/experimentos-fase-II.md)
+- [Dijkstra: contratos, política de pesos e complexidade](docs/dijkstra.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
 custos assumidos; Prim e Kruskal preservam essa origem nos resultados.
