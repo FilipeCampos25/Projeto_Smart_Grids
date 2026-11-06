@@ -4,7 +4,8 @@
 
 - Compilador compatível com C11 (`cc`, GCC ou Clang);
 - GNU Make (`make` ou `mingw32-make` no Windows);
-- Python 3 apenas para reproduzir a normalização e os gráficos.
+- Python 3 para os testes da CLI e do protocolo experimental, a consolidação de
+  relatórios e a reprodução da normalização/gráficos.
 
 ## Alvos do Makefile
 
@@ -14,6 +15,7 @@ make app             # somente build/smart_grid
 make run             # CLI interativa
 make test            # suíte completa, inclusive complementares e dataset real
 make test-real       # integração com 1.838 vértices
+make test-cli        # argumentos, menu, pesos e demonstração --demo
 make test-complementares
 make test-simulacao
 make experimentos    # 126 linhas de medição em CSV
@@ -24,6 +26,9 @@ make sanitize        # ASan/UBSan quando a toolchain oferecer os runtimes
 
 No Windows, substitua `make` por `mingw32-make` quando necessário e informe o
 compilador, por exemplo `mingw32-make CC=clang test`.
+
+O teste de `--demo` usa uma cópia temporária do dataset e um diretório de saída
+temporário, para não substituir os arquivos existentes em `resultados/`.
 
 ## Testes realizados em 02/10/2026
 

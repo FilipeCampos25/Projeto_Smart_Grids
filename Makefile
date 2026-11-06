@@ -42,7 +42,7 @@ TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 	$(BUILD_DIR)/teste_metricas$(EXT) $(BUILD_DIR)/teste_pesos$(EXT) \
 	$(BUILD_DIR)/teste_agm$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 
-.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-agm test-falhas experimentos experimentos-fase2 test-experimentos-fase2 sanitize
+.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-agm test-falhas test-cli experimentos experimentos-fase2 test-experimentos-fase2 sanitize
 
 all: app $(TESTES) $(EXPERIMENTOS_FASE2)
 app: $(BUILD_DIR)/smart_grid$(EXT)
@@ -51,7 +51,7 @@ $(BUILD_DIR) resultados:
 	$(CRIAR_DIRETORIO)
 
 $(BUILD_DIR)/smart_grid$(EXT): $(APP_FONTES) | $(BUILD_DIR)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(APP_FONTES) $(LDFLAGS) $(LDLIBS) -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(APP_FONTES) $(LDFLAGS) $(LDLIBS) -lm -o $@
 
 $(BUILD_DIR)/teste_matriz_adjacencia$(EXT): src/matriz_adjacencia.c tests/teste_matriz_adjacencia.c | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -o $@
@@ -136,6 +136,7 @@ $(EXPERIMENTOS_FASE2): src/experimentos_fase2.c src/benchmark_alocacao.c $(GRAFO
 
 test: all
 	$(foreach t,$(TESTES),$(call EXECUTAR,$(t))$(newline))
+	$(MAKE) test-cli
 	$(MAKE) test-experimentos-fase2
 
 define newline
@@ -167,6 +168,8 @@ test-experimentos-fase2: $(EXPERIMENTOS_FASE2)
 	$(call EXECUTAR,$<) --saida "$(BUILD_DIR)/fase2_teste_bruto.csv" --ambiente "$(BUILD_DIR)/fase2_teste_ambiente.txt" --repeticoes 1 --semente 20261106
 	$(PYTHON) scripts/analisar_experimentos_fase2.py --entrada "$(BUILD_DIR)/fase2_teste_bruto.csv" --diretorio "$(BUILD_DIR)"
 	$(PYTHON) tests/test_experimentos_fase2.py --runner "$(EXPERIMENTOS_FASE2)"
+test-cli: $(BUILD_DIR)/smart_grid$(EXT)
+	$(PYTHON) tests/test_cli.py --executavel "$(BUILD_DIR)/smart_grid$(EXT)"
 experimentos-fase2: $(EXPERIMENTOS_FASE2) | resultados
 	$(call EXECUTAR,$<) --saida resultados/fase2_bruto.csv --ambiente resultados/fase2_ambiente.txt --repeticoes $(REPETICOES_FASE2) --semente $(SEMENTE_FASE2)
 	$(PYTHON) scripts/analisar_experimentos_fase2.py --entrada resultados/fase2_bruto.csv --diretorio resultados
