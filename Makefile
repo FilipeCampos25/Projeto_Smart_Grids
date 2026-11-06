@@ -23,8 +23,9 @@ GRAFOS = src/grafo_lista.c src/matriz_adjacencia.c
 TRAVESSIAS = src/bfs.c src/dfs.c src/componentes_conexos.c
 SIMULACAO = src/simulacao_falha.c
 COMPLEMENTARES = src/algoritmos_complementares.c
+AGM = src/agm.c
 DATASET = src/dataset.c
-APP_FONTES = src/main.c src/metricas.c $(DATASET) $(GRAFOS) $(TRAVESSIAS) $(SIMULACAO) $(COMPLEMENTARES)
+APP_FONTES = src/main.c src/metricas.c $(DATASET) $(GRAFOS) $(TRAVESSIAS) $(SIMULACAO) $(COMPLEMENTARES) $(AGM)
 
 TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 	$(BUILD_DIR)/teste_alocacao$(EXT) \
@@ -35,9 +36,10 @@ TESTES = $(BUILD_DIR)/teste_matriz_adjacencia$(EXT) \
 	$(BUILD_DIR)/teste_componentes_conexos$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT) \
 	$(BUILD_DIR)/teste_simulacao_falha$(EXT) $(BUILD_DIR)/teste_simulacao_falhas$(EXT) \
 	$(BUILD_DIR)/teste_algoritmos_complementares$(EXT) $(BUILD_DIR)/teste_dataset$(EXT) \
-	$(BUILD_DIR)/teste_metricas$(EXT) $(BUILD_DIR)/teste_pesos$(EXT)
+	$(BUILD_DIR)/teste_metricas$(EXT) $(BUILD_DIR)/teste_pesos$(EXT) \
+	$(BUILD_DIR)/teste_agm$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 
-.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-falhas experimentos sanitize
+.PHONY: all app run test test-real test-bfs test-dfs test-componentes test-simulacao test-complementares test-agm test-falhas experimentos sanitize
 
 all: app $(TESTES)
 app: $(BUILD_DIR)/smart_grid$(EXT)
@@ -114,6 +116,15 @@ $(BUILD_DIR)/teste_metricas$(EXT): tests/test_metricas.c src/metricas.c $(DATASE
 $(BUILD_DIR)/teste_pesos$(EXT): tests/test_pesos.c $(DATASET) $(GRAFOS) $(TRAVESSIAS) $(SIMULACAO) | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
+$(BUILD_DIR)/teste_agm$(EXT): $(AGM) tests/test_agm.c $(GRAFOS) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -lm -o $@
+
+$(BUILD_DIR)/agm_falhas.o: $(AGM) tests/alocacao_teste.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include tests/alocacao_teste.h -Dmalloc=teste_malloc -Dfree=teste_free -c $(AGM) -o $@
+
+$(BUILD_DIR)/teste_agm_falhas$(EXT): tests/test_agm_falhas.c $(GRAFOS) $(BUILD_DIR)/agm_falhas.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -lm -o $@
+
 test: all
 	$(foreach t,$(TESTES),$(call EXECUTAR,$(t))$(newline))
 
@@ -138,7 +149,10 @@ test-simulacao: $(BUILD_DIR)/teste_simulacao_falha$(EXT) $(BUILD_DIR)/teste_simu
 	$(call EXECUTAR,$(word 2,$^))
 test-complementares: $(BUILD_DIR)/teste_algoritmos_complementares$(EXT)
 	$(call EXECUTAR,$<)
-test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT) $(BUILD_DIR)/teste_simulacao_falhas$(EXT)
+test-agm: $(BUILD_DIR)/teste_agm$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
+	$(call EXECUTAR,$(word 1,$^))
+	$(call EXECUTAR,$(word 2,$^))
+test-falhas: $(BUILD_DIR)/teste_alocacao$(EXT) $(BUILD_DIR)/teste_grafo_lista_falhas$(EXT) $(BUILD_DIR)/teste_bfs_falhas$(EXT) $(BUILD_DIR)/teste_dfs_falhas$(EXT) $(BUILD_DIR)/teste_componentes_falhas$(EXT) $(BUILD_DIR)/teste_simulacao_falhas$(EXT) $(BUILD_DIR)/teste_agm_falhas$(EXT)
 	$(foreach t,$^,$(call EXECUTAR,$(t))$(newline))
 
 run: app

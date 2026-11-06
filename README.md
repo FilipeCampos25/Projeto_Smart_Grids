@@ -14,6 +14,7 @@ DFS, componentes conexos e uma simulação de falha com ilhas topológicas.
 - CLI, medições, experimentos N=100/500/1000, CSVs e gráficos disponíveis.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
+- Prim e Kruskal calculam árvore ou floresta geradora mínima em Lista e Matriz.
 
 “Ilha” significa somente uma componente topológica fora da componente da
 subestação. O projeto não afirma autossuficiência energética e não calcula
@@ -67,6 +68,8 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Consolidação da Fase I](docs/fase-I.md)
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
+- [Árvore/Floresta Geradora Mínima](docs/agm.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
-custos assumidos; Dijkstra, Prim e Kruskal ainda não fazem parte desta etapa.
+custos assumidos; Prim e Kruskal preservam essa origem nos resultados. Dijkstra
+permanece fora do escopo atual.

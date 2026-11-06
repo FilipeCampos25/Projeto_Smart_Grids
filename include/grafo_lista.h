@@ -72,6 +72,9 @@ ResultadoLista buscar_vizinhos_lista(const GrafoLista *grafo, size_t vertice,
 /* Retorna o indice de um vizinho, ou SIZE_MAX se vizinho == NULL. */
 size_t indice_vizinho_lista(const VizinhoLista *vizinho);
 
+/* Copia o peso armazenado no no emprestado; NULL retorna peso sem informacao. */
+PesoAresta peso_vizinho_lista(const VizinhoLista *vizinho);
+
 /* Avanca em O(1); retorna NULL no fim ou quando vizinho == NULL. */
 const VizinhoLista *proximo_vizinho_lista(const VizinhoLista *vizinho);
 

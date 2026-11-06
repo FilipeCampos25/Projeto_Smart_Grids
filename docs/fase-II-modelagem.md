@@ -88,10 +88,16 @@ tempo ou custo financeiro. Obter qualquer dessas grandezas exigira nova fonte,
 rastreabilidade do campo e unidade documentada; elas nao podem ser derivadas
 somente do comprimento.
 
+## Algoritmos de arvore geradora minima
+
+Prim e Kruskal estao implementados em `include/agm.h` e `src/agm.c`; contratos,
+complexidades, politica para pesos ausentes, exemplos e validacoes estao em
+[docs/agm.md](./agm.md).
+
 ## Limitacoes para algoritmos futuros
 
-- Dijkstra e AGM devem definir se aceitam arestas sem peso; nao devem converte-las
-  implicitamente em zero.
+- Dijkstra ainda deve definir sua politica para arestas sem peso; nao deve
+  converte-las implicitamente em zero. AGM retorna status especifico.
 - Somar valores validos individualmente ainda pode exceder `DBL_MAX`; o algoritmo
   deve detectar resultado nao finito.
 - A rede real normalizada e uma arvore. Sua AGM coincide com a propria rede e o
