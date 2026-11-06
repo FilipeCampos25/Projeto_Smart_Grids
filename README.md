@@ -1,9 +1,10 @@
-# Smart Grid — Fase I
+# Smart Grid — Fases I e II
 
 Aplicação acadêmica em C para analisar topologia e conectividade de uma rede
 real de distribuição de energia. O projeto carrega um recorte da BDGD/ANEEL,
 constrói a mesma topologia como Lista e Matriz de Adjacência e executa BFS,
-DFS, componentes conexos e uma simulação de falha com ilhas topológicas.
+DFS, componentes conexos, uma simulação de falha com ilhas topológicas e
+Dijkstra sobre pesos explícitos da Fase II.
 
 ## Estado atual
 
@@ -12,6 +13,8 @@ DFS, componentes conexos e uma simulação de falha com ilhas topológicas.
 - Subestação `SFOR`, origem externa `1_SFOR_1`.
 - Lista e Matriz validadas semanticamente sobre os mesmos dados.
 - CLI, medições, experimentos N=100/500/1000, CSVs e gráficos disponíveis.
+- Dijkstra em Lista (heap binário) e Matriz (varredura), com política explícita
+  para arestas sem peso e indicação de custos assumidos.
 - Algoritmos anteriores preservados: conectividade em dígrafos, articulações,
   pontes, verificação acadêmica de Euler e coloração gulosa.
 
@@ -49,9 +52,14 @@ build/smart_grid --demo
 
 ## CLI
 
-O menu alterna Lista/Matriz, executa BFS, DFS e componentes, simula a falha
-real, mostra métricas, exporta DOT e apresenta os algoritmos complementares.
+O menu alterna Lista/Matriz, executa BFS, DFS, componentes e Dijkstra, simula a
+falha real, mostra métricas, exporta DOT e apresenta algoritmos complementares.
 Entradas inválidas são rejeitadas sem encerrar a aplicação.
+
+No Dijkstra, origem e destino são informados pelos IDs externos do dataset. O
+usuário escolhe rejeitar ou ignorar conexões sem comprimento, ou fornecer um
+custo assumido. Resultados que usam custo assumido são identificados como
+cenários abstratos, não como distância física real em metros.
 
 O arquivo DOT pode ser convertido opcionalmente, sem afetar os algoritmos:
 
@@ -67,6 +75,8 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Consolidação da Fase I](docs/fase-I.md)
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
+- [Dijkstra: contratos, política de pesos e complexidade](docs/dijkstra.md)
 
 A infraestrutura de pesos da Fase II preserva comprimentos medidos e distingue
-custos assumidos; Dijkstra, Prim e Kruskal ainda não fazem parte desta etapa.
+custos assumidos. Dijkstra está disponível; Prim e Kruskal ainda não foram
+implementados.
