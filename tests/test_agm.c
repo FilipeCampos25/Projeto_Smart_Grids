@@ -353,11 +353,20 @@ static void testar_pesos_e_erros(void)
               inserir_aresta_lista(lista, 0, 1) == LISTA_SUCESSO &&
               inserir_aresta(matriz, 0, 1) == MATRIZ_SUCESSO);
     if (lista == NULL || matriz == NULL) goto cleanup;
+    resultado.quantidade_arestas = 7;
+    resultado.custo_total = 11.5;
+    resultado.quantidade_componentes = 3;
+    resultado.arvore_completa = 1;
     verificar_status("Lista rejeita peso ausente", AGM_PESO_AUSENTE,
                      agm_kruskal_lista(lista, &resultado));
     verificar_status("Matriz rejeita peso ausente", AGM_PESO_AUSENTE,
                      agm_prim_matriz(matriz, &resultado));
-    verificar("Erro preserva saida", 0, resultado.arestas == NULL);
+    verificar("Erro preserva saida", 1,
+              resultado.arestas == NULL &&
+              resultado.quantidade_arestas == 7 &&
+              resultado.custo_total == 11.5 &&
+              resultado.quantidade_componentes == 3 &&
+              resultado.arvore_completa == 1);
     verificar_status("Lista nula", AGM_ARGUMENTO_INVALIDO,
                      agm_prim_lista(NULL, &resultado));
     verificar_status("Saida nula", AGM_ARGUMENTO_INVALIDO,
@@ -423,6 +432,23 @@ static void testar_grafo_vazio(void)
                      agm_kruskal_matriz(matriz, &resultado));
     verificar("Matriz vazia sem arestas", 0,
               (int)resultado.quantidade_arestas);
+    liberar_resultado_agm(&resultado);
+    liberar_grafo_lista(lista);
+    destruir_matriz(&matriz);
+
+    lista = criar_lista(1);
+    matriz = criar_matriz_ponderada(1);
+    verificar("Criar grafo unitario", 1, lista != NULL && matriz != NULL);
+    if (lista != NULL && matriz != NULL) {
+        verificar_status("Prim unitario", AGM_SUCESSO,
+                         agm_prim_lista(lista, &resultado));
+        verificar("Unitario tem uma componente", 1,
+                  (int)resultado.quantidade_componentes);
+        verificar("Unitario e arvore completa", 1,
+                  resultado.arvore_completa);
+        verificar("Unitario nao tem arestas", 0,
+                  (int)resultado.quantidade_arestas);
+    }
     liberar_resultado_agm(&resultado);
     liberar_grafo_lista(lista);
     destruir_matriz(&matriz);

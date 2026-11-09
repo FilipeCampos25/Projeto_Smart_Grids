@@ -199,6 +199,7 @@ test-cli: app
 	$(PYTHON) tests/test_cli.py --executavel "$(BUILD_DIR)/smart_grid$(EXT)"
 test-experimentos-fase2: $(EXPERIMENTOS_FASE2)
 	$(call EXECUTAR,$<) --validar-gerador
+	$(call EXECUTAR,$<) --validar-protocolo
 	$(call EXECUTAR,$<) --saida "$(BUILD_DIR)/fase2_teste_bruto.csv" --ambiente "$(BUILD_DIR)/fase2_teste_ambiente.txt" --repeticoes 1 --semente 20261106
 	$(PYTHON) scripts/analisar_experimentos_fase2.py --entrada "$(BUILD_DIR)/fase2_teste_bruto.csv" --diretorio "$(BUILD_DIR)"
 	$(PYTHON) tests/test_experimentos_fase2.py --runner "$(EXPERIMENTOS_FASE2)"

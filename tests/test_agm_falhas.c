@@ -95,13 +95,20 @@ static void testar_falhas_algoritmo(const GrafoLista *grafo, int usar_prim)
     verificar("Execucao preliminar sem vazamentos", blocos_ativos == 0);
 
     for (size_t etapa = 1; etapa <= total_alocacoes; etapa++) {
+        resultado.quantidade_arestas = 17;
+        resultado.custo_total = 23.5;
+        resultado.quantidade_componentes = 19;
+        resultado.arvore_completa = 1;
         chamadas = 0;
         falhar_na_chamada = etapa;
         status = usar_prim ? agm_prim_lista(grafo, &resultado) :
                              agm_kruskal_lista(grafo, &resultado);
         verificar(nome, status == AGM_SEM_MEMORIA);
-        verificar("Falha nao publica saida", resultado.arestas == NULL &&
-                  resultado.quantidade_arestas == 0);
+        verificar("Falha preserva saida", resultado.arestas == NULL &&
+                  resultado.quantidade_arestas == 17 &&
+                  resultado.custo_total == 23.5 &&
+                  resultado.quantidade_componentes == 19 &&
+                  resultado.arvore_completa == 1);
         verificar("Falha libera todas as alocacoes", blocos_ativos == 0);
     }
     falhar_na_chamada = 0;
