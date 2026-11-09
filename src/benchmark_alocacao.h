@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 void *benchmark_malloc(size_t tamanho);
+void *benchmark_calloc(size_t quantidade, size_t tamanho);
 void benchmark_free(void *ponteiro);
 int benchmark_alocacao_reiniciar(void);
 size_t benchmark_alocacao_pico(void);

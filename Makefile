@@ -156,7 +156,13 @@ $(BUILD_DIR)/teste_agm_falhas$(EXT): tests/test_agm_falhas.c $(GRAFOS) $(BUILD_D
 $(BUILD_DIR)/agm_experimento.o: $(AGM) src/benchmark_alocacao.h | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -include src/benchmark_alocacao.h -Dmalloc=benchmark_malloc -Dfree=benchmark_free -c $(AGM) -o $@
 
-$(EXPERIMENTOS_FASE2): src/experimentos_fase2.c src/benchmark_alocacao.c $(GRAFOS) $(BUILD_DIR)/agm_experimento.o | $(BUILD_DIR)
+$(BUILD_DIR)/dijkstra_experimento.o: $(DIJKSTRA) src/benchmark_alocacao.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include src/benchmark_alocacao.h -Dmalloc=benchmark_malloc -Dcalloc=benchmark_calloc -Dfree=benchmark_free -c $(DIJKSTRA) -o $@
+
+$(BUILD_DIR)/cobertura_experimento.o: $(COBERTURA) src/benchmark_alocacao.h | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -include src/benchmark_alocacao.h -Dmalloc=benchmark_malloc -Dcalloc=benchmark_calloc -Dfree=benchmark_free -c $(COBERTURA) -o $@
+
+$(EXPERIMENTOS_FASE2): src/experimentos_fase2.c src/benchmark_alocacao.c $(GRAFOS) $(BUILD_DIR)/agm_experimento.o $(BUILD_DIR)/dijkstra_experimento.o $(BUILD_DIR)/cobertura_experimento.o | $(BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ $(LDFLAGS) $(LDLIBS) -lm -o $@
 
 test: all

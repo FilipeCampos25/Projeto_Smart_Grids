@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+<rect width="100%" height="100%" fill="white"/>
+<text x="480" y="30" text-anchor="middle" font-family="sans-serif" font-size="20">Fase II: memoria total estimada</text>
+<line x1="90" y1="70" x2="90" y2="460" stroke="#333"/>
+<line x1="90" y1="460" x2="910" y2="460" stroke="#333"/>
+<line x1="90" y1="460.0" x2="910" y2="460.0" stroke="#ddd"/>
+<text x="82" y="464.0" text-anchor="end" font-family="sans-serif" font-size="11">0</text>
+<line x1="90" y1="382.0" x2="910" y2="382.0" stroke="#ddd"/>
+<text x="82" y="386.0" text-anchor="end" font-family="sans-serif" font-size="11">2.056e+06</text>
+<line x1="90" y1="304.0" x2="910" y2="304.0" stroke="#ddd"/>
+<text x="82" y="308.0" text-anchor="end" font-family="sans-serif" font-size="11">4.113e+06</text>
+<line x1="90" y1="226.0" x2="910" y2="226.0" stroke="#ddd"/>
+<text x="82" y="230.0" text-anchor="end" font-family="sans-serif" font-size="11">6.169e+06</text>
+<line x1="90" y1="148.0" x2="910" y2="148.0" stroke="#ddd"/>
+<text x="82" y="152.0" text-anchor="end" font-family="sans-serif" font-size="11">8.226e+06</text>
+<line x1="90" y1="70.0" x2="910" y2="70.0" stroke="#ddd"/>
+<text x="82" y="74.0" text-anchor="end" font-family="sans-serif" font-size="11">1.028e+07</text>
+<text x="90.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">9</text>
+<text x="254.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">11</text>
+<text x="418.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">13</text>
+<text x="582.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">100</text>
+<text x="746.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">500</text>
+<text x="910.0" y="484" text-anchor="middle" font-family="sans-serif" font-size="12">1000</text>
+<circle cx="582.0" cy="458.4" r="4" fill="#1665a7"/>
+<circle cx="746.0" cy="452.0" r="4" fill="#1665a7"/>
+<circle cx="910.0" cy="443.9" r="4" fill="#1665a7"/>
+<polyline points="582.0,458.4 746.0,452.0 910.0,443.9" fill="none" stroke="#1665a7" stroke-width="2"/>
+<text x="100" y="82" font-family="sans-serif" font-size="11" fill="#1665a7">AGM: Kruskal - lista</text>
+<circle cx="582.0" cy="455.5" r="4" fill="#d95f02"/>
+<circle cx="746.0" cy="361.8" r="4" fill="#d95f02"/>
+<circle cx="910.0" cy="74.0" r="4" fill="#d95f02"/>
+<polyline points="582.0,455.5 746.0,361.8 910.0,74.0" fill="none" stroke="#d95f02" stroke-width="2"/>
+<text x="100" y="98" font-family="sans-serif" font-size="11" fill="#d95f02">AGM: Kruskal - matriz</text>
+<circle cx="582.0" cy="458.0" r="4" fill="#2a9d4b"/>
+<circle cx="746.0" cy="450.0" r="4" fill="#2a9d4b"/>
+<circle cx="910.0" cy="439.9" r="4" fill="#2a9d4b"/>
+<polyline points="582.0,458.0 746.0,450.0 910.0,439.9" fill="none" stroke="#2a9d4b" stroke-width="2"/>
+<text x="100" y="114" font-family="sans-serif" font-size="11" fill="#2a9d4b">AGM: Prim - lista</text>
+<circle cx="582.0" cy="455.1" r="4" fill="#8e44ad"/>
+<circle cx="746.0" cy="359.8" r="4" fill="#8e44ad"/>
+<circle cx="910.0" cy="70.0" r="4" fill="#8e44ad"/>
+<polyline points="582.0,455.1 746.0,359.8 910.0,70.0" fill="none" stroke="#8e44ad" stroke-width="2"/>
+<text x="100" y="130" font-family="sans-serif" font-size="11" fill="#8e44ad">AGM: Prim - matriz</text>
+<circle cx="582.0" cy="458.9" r="4" fill="#b22222"/>
+<circle cx="746.0" cy="454.6" r="4" fill="#b22222"/>
+<circle cx="910.0" cy="449.3" r="4" fill="#b22222"/>
+<polyline points="582.0,458.9 746.0,454.6 910.0,449.3" fill="none" stroke="#b22222" stroke-width="2"/>
+<text x="100" y="146" font-family="sans-serif" font-size="11" fill="#b22222">CaminhoMinimo: Dijkstra - lista</text>
+<circle cx="582.0" cy="456.1" r="4" fill="#008b8b"/>
+<circle cx="746.0" cy="364.8" r="4" fill="#008b8b"/>
+<circle cx="910.0" cy="80.0" r="4" fill="#008b8b"/>
+<polyline points="582.0,456.1 746.0,364.8 910.0,80.0" fill="none" stroke="#008b8b" stroke-width="2"/>
+<text x="100" y="162" font-family="sans-serif" font-size="11" fill="#008b8b">CaminhoMinimo: Dijkstra - matriz</text>
+<circle cx="90.0" cy="459.9" r="4" fill="#1665a7"/>
+<circle cx="254.0" cy="459.9" r="4" fill="#1665a7"/>
+<circle cx="418.0" cy="459.9" r="4" fill="#1665a7"/>
+<circle cx="582.0" cy="458.9" r="4" fill="#1665a7"/>
+<circle cx="746.0" cy="454.4" r="4" fill="#1665a7"/>
+<circle cx="910.0" cy="448.7" r="4" fill="#1665a7"/>
+<polyline points="90.0,459.9 254.0,459.9 418.0,459.9 582.0,458.9 746.0,454.4 910.0,448.7" fill="none" stroke="#1665a7" stroke-width="2"/>
+<text x="100" y="178" font-family="sans-serif" font-size="11" fill="#1665a7">CoberturaVertices: Aproximacao2 - lista</text>
+<circle cx="90.0" cy="459.9" r="4" fill="#d95f02"/>
+<circle cx="254.0" cy="459.9" r="4" fill="#d95f02"/>
+<circle cx="418.0" cy="459.9" r="4" fill="#d95f02"/>
+<circle cx="582.0" cy="456.0" r="4" fill="#d95f02"/>
+<circle cx="746.0" cy="364.2" r="4" fill="#d95f02"/>
+<circle cx="910.0" cy="78.8" r="4" fill="#d95f02"/>
+<polyline points="90.0,459.9 254.0,459.9 418.0,459.9 582.0,456.0 746.0,364.2 910.0,78.8" fill="none" stroke="#d95f02" stroke-width="2"/>
+<text x="100" y="194" font-family="sans-serif" font-size="11" fill="#d95f02">CoberturaVertices: Aproximacao2 - matriz</text>
+<circle cx="90.0" cy="459.9" r="4" fill="#2a9d4b"/>
+<circle cx="254.0" cy="459.9" r="4" fill="#2a9d4b"/>
+<circle cx="418.0" cy="459.9" r="4" fill="#2a9d4b"/>
+<polyline points="90.0,459.9 254.0,459.9 418.0,459.9" fill="none" stroke="#2a9d4b" stroke-width="2"/>
+<text x="100" y="210" font-family="sans-serif" font-size="11" fill="#2a9d4b">CoberturaVertices: BacktrackingExato - lista</text>
+<circle cx="90.0" cy="459.9" r="4" fill="#8e44ad"/>
+<circle cx="254.0" cy="459.9" r="4" fill="#8e44ad"/>
+<circle cx="418.0" cy="459.9" r="4" fill="#8e44ad"/>
+<polyline points="90.0,459.9 254.0,459.9 418.0,459.9" fill="none" stroke="#8e44ad" stroke-width="2"/>
+<text x="100" y="226" font-family="sans-serif" font-size="11" fill="#8e44ad">CoberturaVertices: BacktrackingExato - matriz</text>
+<text x="480" y="525" text-anchor="middle" font-family="sans-serif">Vertices (N)</text>
+<text x="20" y="270" transform="rotate(-90 20 270)" text-anchor="middle" font-family="sans-serif">bytes</text>
+</svg>
