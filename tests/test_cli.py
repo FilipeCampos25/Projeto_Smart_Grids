@@ -30,6 +30,8 @@ class TestarIntegracaoCLI(unittest.TestCase):
         ajuda = executar("--help")
         self.assertEqual(ajuda.returncode, 0)
         self.assertIn("Prim/Kruskal", ajuda.stdout)
+        self.assertIn("Dijkstra", ajuda.stdout)
+        self.assertIn("Cobertura de Vertices", ajuda.stdout)
         self.assertIn("make experimentos-fase2", ajuda.stdout)
 
         invalida = executar("--opcao-inexistente")
@@ -45,12 +47,19 @@ class TestarIntegracaoCLI(unittest.TestCase):
         self.assertEqual(fim.returncode, 0)
         self.assertIn("Entrada encerrada", fim.stdout)
 
-    def test_menu_informa_dependencias_pendentes(self):
-        processo = executar(entrada="9\n0\n")
+    def test_dijkstra_esta_integrado_ao_menu(self):
+        processo = executar(entrada="9\n10031\n10041\n3\n1\n0\n")
         self.assertEqual(processo.returncode, 0)
-        self.assertIn("Dijkstra (Issue #33): indisponivel", processo.stdout)
-        self.assertIn("Cobertura de Vertices", processo.stdout)
-        self.assertIn("make experimentos-fase2", processo.stdout)
+        self.assertIn("Caminho (", processo.stdout)
+        self.assertIn("10031", processo.stdout)
+        self.assertIn("10041", processo.stdout)
+        self.assertIn("Tempo total (construcao + Dijkstra)", processo.stdout)
+
+    def test_cobertura_esta_integrada_ao_menu(self):
+        processo = executar(entrada="11\n1\n0\n")
+        self.assertEqual(processo.returncode, 0)
+        self.assertIn("Aproximacao por matching maximal", processo.stdout)
+        self.assertIn("aproximacao de fator 2", processo.stdout)
 
     def test_agm_nao_aceita_peso_ausente_implicitamente(self):
         processo = executar(entrada="10\n1\n1\n1\n0\n")
@@ -76,7 +85,7 @@ class TestarIntegracaoCLI(unittest.TestCase):
         self.assertIn("Subtotais separados", processo.stdout)
         self.assertIn("soma total e numerica", processo.stdout.lower())
 
-    def test_demo_cobre_fase_i_e_agm_com_ciclo_sintetico(self):
+    def test_demo_cobre_fase_i_e_algoritmos_da_fase_ii(self):
         with tempfile.TemporaryDirectory() as temporario:
             diretorio = Path(temporario)
             shutil.copytree(
@@ -89,7 +98,9 @@ class TestarIntegracaoCLI(unittest.TestCase):
         self.assertIn("DEMONSTRACAO AUTOMATICA", processo.stdout)
         self.assertIn("AGM sintetica: ciclo de 4 vertices, 5 arestas", processo.stdout)
         self.assertIn("custo minimo numerico 4", processo.stdout)
-        self.assertIn("Dijkstra (Issue #33): indisponivel", processo.stdout)
+        self.assertIn("Dijkstra demonstrativo", processo.stdout)
+        self.assertIn("Cobertura de Vertices demonstrativa", processo.stdout)
+        self.assertNotIn("indisponivel", processo.stdout)
 
 
 if __name__ == "__main__":
