@@ -19,7 +19,7 @@ make test-cli        # argumentos, menu, pesos e demonstração --demo
 make test-complementares
 make test-simulacao
 make experimentos    # 126 linhas de medição em CSV
-make experimentos-fase2 # AGM sintética, CSV e gráficos independentes da Fase I
+make experimentos-fase2 # AGM, Dijkstra e Cobertura sintéticos da Fase II
 make test-experimentos-fase2 # reprodutibilidade do gerador e testes do analisador
 make sanitize        # ASan/UBSan quando a toolchain oferecer os runtimes
 ```

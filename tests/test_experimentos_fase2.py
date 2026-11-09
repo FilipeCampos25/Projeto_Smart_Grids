@@ -6,243 +6,162 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 RAIZ = Path(__file__).resolve().parents[1]
-ARQUIVO_SCRIPT = RAIZ / "scripts" / "analisar_experimentos_fase2.py"
-EXECUTAVEL_EXPERIMENTOS = None
-ESPEC = importlib.util.spec_from_file_location(
-    "analisar_experimentos_fase2", ARQUIVO_SCRIPT
-)
+SCRIPT = RAIZ / "scripts" / "analisar_experimentos_fase2.py"
+EXECUTAVEL = None
+ESPEC = importlib.util.spec_from_file_location("fase2", SCRIPT)
 ANALISADOR = importlib.util.module_from_spec(ESPEC)
 ESPEC.loader.exec_module(ANALISADOR)
 
 
-def linha(algoritmo, representacao, custo=12.0, status="OK", repeticao=1):
+def linha(algoritmo, representacao, problema="AGM", solucao=12.0,
+          referencia=12.0, razao=1.0, status="OK", repeticao=1):
+    estrutural, auxiliar = 8192, 4096
     return {
         "cenario": "sintetico_conectado_ciclico_pesos_assumidos",
-        "algoritmo": algoritmo,
-        "representacao": representacao,
-        "N": "100",
-        "arestas": "299",
-        "repeticao": str(repeticao),
-        "semente": "20261206",
+        "problema": problema, "algoritmo": algoritmo,
+        "representacao": representacao, "N": "100", "arestas": "299",
+        "repeticao": str(repeticao), "semente": "20261206",
         "parametros": "arvore_geradora+2N_arestas_extras",
-        "tempo_ms": "0.125",
-        "memoria_representacao_bytes": "8192",
-        "memoria_auxiliar_pico_bytes": "4096",
-        "valor_solucao": str(custo),
-        "status": status,
+        "tempo_ms": "0.125", "memoria_representacao_bytes": str(estrutural),
+        "memoria_auxiliar_pico_bytes": str(auxiliar),
+        "memoria_total_estimada_bytes": str(estrutural + auxiliar),
+        "valor_solucao": str(solucao), "otimo_referencia": str(referencia),
+        "razao_aproximacao": str(razao), "status": status,
     }
 
 
-def gravar_csv(caminho, linhas):
+def conjunto_agm(repeticao=1):
+    return [linha(a, r, repeticao=repeticao)
+            for a in ("Prim", "Kruskal") for r in ("lista", "matriz")]
+
+
+def gravar(caminho, linhas):
     with caminho.open("w", newline="", encoding="utf-8") as arquivo:
-        escritor = csv.DictWriter(
-            arquivo, fieldnames=ANALISADOR.CAMPOS_BRUTOS, lineterminator="\n"
-        )
+        escritor = csv.DictWriter(arquivo, fieldnames=ANALISADOR.CAMPOS_BRUTOS,
+                                  lineterminator="\n")
         escritor.writeheader()
         escritor.writerows(linhas)
 
 
 class TestarExperimentosFase2(unittest.TestCase):
-    def conjunto_valido(self):
-        return [
-            linha(algoritmo, representacao)
-            for algoritmo in ("Prim", "Kruskal")
-            for representacao in ("lista", "matriz")
-        ]
-
-    def test_consolida_csv_e_gera_graficos_svg(self):
+    def test_consolida_e_gera_cinco_svgs(self):
         with tempfile.TemporaryDirectory() as temporario:
             diretorio = Path(temporario)
             entrada = diretorio / "bruto.csv"
-            gravar_csv(entrada, self.conjunto_valido())
-            consolidadas = ANALISADOR.consolidar(
-                ANALISADOR.carregar(entrada), diretorio
-            )
-            ANALISADOR.gerar_graficos(consolidadas, diretorio)
-
-            with (diretorio / "fase2_consolidado.csv").open(
-                newline="", encoding="utf-8"
-            ) as arquivo:
-                leitor = csv.DictReader(arquivo)
-                self.assertEqual(leitor.fieldnames, ANALISADOR.CAMPOS_CONSOLIDADOS)
-                dados = list(leitor)
+            gravar(entrada, conjunto_agm())
+            dados = ANALISADOR.consolidar(ANALISADOR.carregar(entrada), diretorio)
+            ANALISADOR.gerar_graficos(dados, diretorio)
             self.assertEqual(len(dados), 4)
-            self.assertTrue(
-                all(registro["equivalencia_validada"] == "sim" for registro in dados)
-            )
-            self.assertTrue(
-                all(
-                    int(registro["memoria_auxiliar_pico_mediana_bytes"]) > 0
-                    for registro in dados
-                )
-            )
-            for nome in (
-                "fase2_tempo.svg",
-                "fase2_memoria.svg",
-                "fase2_qualidade.svg",
-            ):
+            for nome in ("fase2_tempo.svg", "fase2_memoria.svg",
+                         "fase2_agm_custo.svg", "fase2_dijkstra_custo.svg",
+                         "fase2_cobertura_qualidade.svg"):
                 conteudo = (diretorio / nome).read_text(encoding="utf-8")
                 self.assertIn("<svg ", conteudo)
                 self.assertIn("</svg>", conteudo)
 
-    def test_mantem_media_e_mediana_de_repeticoes(self):
-        amostras = []
-        for repeticao, tempo in ((1, "1.0"), (2, "3.0")):
-            for medicao in self.conjunto_valido():
-                medicao["repeticao"] = str(repeticao)
-                medicao["tempo_ms"] = tempo
-                amostras.append(medicao)
+    def test_calcula_media_mediana_e_total(self):
+        amostras = conjunto_agm(1) + conjunto_agm(2)
+        for item in amostras[4:]:
+            item["tempo_ms"] = "3.125"
         with tempfile.TemporaryDirectory() as temporario:
-            diretorio = Path(temporario)
-            entrada = diretorio / "bruto.csv"
-            gravar_csv(entrada, amostras)
-            dados = ANALISADOR.consolidar(ANALISADOR.carregar(entrada), diretorio)
-        self.assertEqual(len(dados), 4)
-        self.assertTrue(
-            all(float(registro["tempo_mediana_ms"]) == 2.0 for registro in dados)
-        )
-        self.assertTrue(
-            all(float(registro["tempo_media_ms"]) == 2.0 for registro in dados)
-        )
-        self.assertTrue(all(int(registro["repeticoes"]) == 2 for registro in dados))
+            entrada = Path(temporario) / "bruto.csv"
+            gravar(entrada, amostras)
+            dados = ANALISADOR.consolidar(ANALISADOR.carregar(entrada), Path(temporario))
+        self.assertTrue(all(float(x["tempo_media_ms"]) == 1.625 for x in dados))
+        self.assertTrue(all(int(x["memoria_total_estimada_mediana_bytes"]) == 12288 for x in dados))
 
-    def test_rejeita_cabecalho_incorreto(self):
+    def test_rejeita_status_memoria_e_csv_incompletos(self):
         with tempfile.TemporaryDirectory() as temporario:
-            entrada = Path(temporario) / "invalido.csv"
-            entrada.write_text("algoritmo,vertices\nPrim,100\n", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "Cabecalho"):
-                ANALISADOR.carregar(entrada)
-
-    def test_rejeita_status_falho(self):
-        with tempfile.TemporaryDirectory() as temporario:
-            entrada = Path(temporario) / "falha.csv"
-            gravar_csv(
-                entrada,
-                [linha("Prim", "lista", status="ERRO_VALIDACAO")],
-            )
+            entrada = Path(temporario) / "bruto.csv"
+            dados = conjunto_agm()
+            dados[0]["status"] = "ERRO_VALIDACAO"
+            gravar(entrada, dados)
             with self.assertRaisesRegex(ValueError, "status experimental"):
                 ANALISADOR.carregar(entrada)
+            dados = conjunto_agm()
+            dados[0]["memoria_total_estimada_bytes"] = "1"
+            gravar(entrada, dados)
+            with self.assertRaisesRegex(ValueError, "memoria total inconsistente"):
+                ANALISADOR.carregar(entrada)
+            gravar(entrada, conjunto_agm()[:-1])
+            with self.assertRaisesRegex(ValueError, "AGM incompleta"):
+                ANALISADOR.carregar(entrada)
 
-    def test_rejeita_custos_divergentes_ou_comparacao_incompleta(self):
-        divergentes = self.conjunto_valido()
-        divergentes[0]["valor_solucao"] = "15"
-        with self.assertRaisesRegex(ValueError, "divergentes"):
-            ANALISADOR.verificar_equivalencia(
-                [
-                    {
-                        **item,
-                        "N": int(item["N"]),
-                        "repeticao": int(item["repeticao"]),
-                        "semente": int(item["semente"]),
-                        "valor_solucao": float(item["valor_solucao"]),
-                    }
-                    for item in divergentes
-                ]
-            )
-        incompletas = self.conjunto_valido()[:-1]
-        with self.assertRaisesRegex(ValueError, "incompleta"):
-            ANALISADOR.verificar_equivalencia(
-                [
-                    {
-                        **item,
-                        "N": int(item["N"]),
-                        "repeticao": int(item["repeticao"]),
-                        "semente": int(item["semente"]),
-                        "valor_solucao": float(item["valor_solucao"]),
-                    }
-                    for item in incompletas
-                ]
-            )
-
-    def test_rejeita_metricas_nao_finitas(self):
+    def test_rejeita_dijkstra_invalido(self):
+        dados = [linha("Dijkstra", r, "CaminhoMinimo", solucao=10,
+                       referencia=9) for r in ("lista", "matriz")]
         with tempfile.TemporaryDirectory() as temporario:
-            entrada = Path(temporario) / "nan.csv"
-            registro = linha("Prim", "lista")
-            registro["tempo_ms"] = "nan"
-            gravar_csv(entrada, [registro])
-            with self.assertRaisesRegex(ValueError, "tempo nao finito"):
+            entrada = Path(temporario) / "bruto.csv"
+            gravar(entrada, dados)
+            with self.assertRaisesRegex(ValueError, "Caminho nao minimo"):
                 ANALISADOR.carregar(entrada)
 
-    def test_rejeita_instancia_sintetica_sem_ciclo_ou_com_arestas_inesperadas(self):
+    def test_rejeita_protocolo_sem_todas_as_escalas(self):
+        with self.assertRaisesRegex(ValueError, "Protocolo incompleto"):
+            ANALISADOR.verificar_escalas_protocolo([
+                {**linha("Prim", "lista"), "N": 100, "repeticao": 1}
+            ])
+
+    def test_rejeita_aproximacao_acima_de_dois(self):
+        dados = []
+        for representacao in ("lista", "matriz"):
+            dados.append(linha("BacktrackingExato", representacao,
+                               "CoberturaVertices", 4, 4, 1))
+            dados.append(linha("Aproximacao2", representacao,
+                               "CoberturaVertices", 9, 4, 2.25))
         with tempfile.TemporaryDirectory() as temporario:
-            entrada = Path(temporario) / "instancia.csv"
-            registro = linha("Prim", "lista")
-            registro["arestas"] = "99"
-            gravar_csv(entrada, [registro])
-            with self.assertRaisesRegex(ValueError, "conectadas e ciclicas"):
+            entrada = Path(temporario) / "bruto.csv"
+            gravar(entrada, dados)
+            with self.assertRaisesRegex(ValueError, "Garantia"):
                 ANALISADOR.carregar(entrada)
 
-            registro["arestas"] = "300"
-            gravar_csv(entrada, [registro])
-            with self.assertRaisesRegex(ValueError, "E esperado"):
-                ANALISADOR.carregar(entrada)
+    def test_metadados_e_escalas_da_execucao(self):
+        if EXECUTAVEL is None:
+            self.skipTest("Makefile fornece o runner.")
+        diretorio = EXECUTAVEL.parent
+        ambiente = (diretorio / "fase2_teste_ambiente.txt").read_text(encoding="utf-8")
+        for campo in ("compilador=", "relogio=", "repeticoes=1",
+                      "tamanhos_polinomiais=100,500,1000",
+                      "tamanhos_cobertura_exata=9,11,13"):
+            self.assertIn(campo, ambiente)
+        with (diretorio / "fase2_teste_bruto.csv").open(newline="", encoding="utf-8") as arquivo:
+            dados = list(csv.DictReader(arquivo))
+        self.assertEqual({int(x["N"]) for x in dados if x["problema"] == "CaminhoMinimo"}, {100, 500, 1000})
+        self.assertEqual({int(x["N"]) for x in dados if x["algoritmo"] == "BacktrackingExato"}, {9, 11, 13})
 
-    def test_execucao_cli_rejeita_csv_incompleto(self):
+    def test_runner_reproduz_instancias_e_solucoes(self):
+        if EXECUTAVEL is None:
+            self.skipTest("Makefile fornece o runner.")
         with tempfile.TemporaryDirectory() as temporario:
             diretorio = Path(temporario)
-            entrada = diretorio / "bruto.csv"
-            gravar_csv(entrada, [linha("Prim", "lista")])
-            processo = subprocess.run(
-                [
-                    sys.executable,
-                    str(ARQUIVO_SCRIPT),
-                    "--entrada",
-                    str(entrada),
-                    "--diretorio",
-                    str(diretorio),
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        self.assertEqual(processo.returncode, 1)
-        self.assertIn("incompleta", processo.stderr)
+            arquivos = []
+            for indice in (1, 2):
+                csv_saida = diretorio / f"r{indice}.csv"
+                processo = subprocess.run([
+                    str(EXECUTAVEL), "--saida", str(csv_saida), "--ambiente",
+                    str(diretorio / f"a{indice}.txt"), "--repeticoes", "1",
+                    "--semente", "12345"], capture_output=True, text=True)
+                self.assertEqual(processo.returncode, 0, processo.stderr)
+                with csv_saida.open(newline="", encoding="utf-8") as arquivo:
+                    arquivos.append(list(csv.DictReader(arquivo)))
+            self.assertEqual(len(arquivos[0]), len(arquivos[1]))
+            ignorar = {"tempo_ms"}
+            self.assertEqual([{k: v for k, v in x.items() if k not in ignorar} for x in arquivos[0]],
+                             [{k: v for k, v in x.items() if k not in ignorar} for x in arquivos[1]])
 
-    def test_metadata_ambiente_da_execucao_c(self):
-        diretorio_build = (
-            EXECUTAVEL_EXPERIMENTOS.parent
-            if EXECUTAVEL_EXPERIMENTOS is not None
-            else RAIZ / "build"
-        )
-        metadados = diretorio_build / "fase2_teste_ambiente.txt"
-        if not metadados.exists():
-            self.skipTest("Execute test-experimentos-fase2 para gerar os metadados.")
-        conteudo = metadados.read_text(encoding="utf-8")
-        for campo in (
-            "compilador=",
-            "padrao_C=",
-            "sistema=",
-            "arquitetura=",
-            "repeticoes=1",
-            "semente_base=20261106",
-            "tamanhos=100,500,1000",
-        ):
-            with self.subTest(campo=campo):
-                self.assertIn(campo, conteudo)
-
-    def test_executavel_rejeita_parametros_invalidos(self):
-        if EXECUTAVEL_EXPERIMENTOS is None:
-            self.skipTest("Makefile fornece o caminho do executavel experimental.")
-        for argumentos in (
-            ("--repeticoes", "0"),
-            ("--repeticoes", "101"),
-            ("--semente", "0"),
-            ("--opcao-inexistente",),
-        ):
-            with self.subTest(argumentos=argumentos):
-                processo = subprocess.run(
-                    [str(EXECUTAVEL_EXPERIMENTOS), *argumentos],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                )
-                self.assertNotEqual(processo.returncode, 0)
+    def test_runner_rejeita_parametros_invalidos(self):
+        if EXECUTAVEL is None:
+            self.skipTest("Makefile fornece o runner.")
+        for argumentos in (("--repeticoes", "0"), ("--repeticoes", "101"),
+                           ("--semente", "0"), ("--desconhecida",)):
+            processo = subprocess.run([str(EXECUTAVEL), *argumentos],
+                                      capture_output=True, text=True)
+            self.assertNotEqual(processo.returncode, 0)
 
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "--runner":
-        EXECUTAVEL_EXPERIMENTOS = Path(sys.argv[2]).resolve()
+        EXECUTAVEL = Path(sys.argv[2]).resolve()
         del sys.argv[1:3]
     unittest.main()

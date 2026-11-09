@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct {
     void *ponteiro;
@@ -37,6 +38,21 @@ void *benchmark_malloc(size_t tamanho)
     }
     free(ponteiro);
     return NULL;
+}
+
+void *benchmark_calloc(size_t quantidade, size_t tamanho)
+{
+    size_t total;
+    void *ponteiro;
+    if (tamanho != 0 && quantidade > SIZE_MAX / tamanho) {
+        return NULL;
+    }
+    total = quantidade * tamanho;
+    ponteiro = benchmark_malloc(total);
+    if (ponteiro != NULL) {
+        memset(ponteiro, 0, total);
+    }
+    return ponteiro;
 }
 
 void benchmark_free(void *ponteiro)

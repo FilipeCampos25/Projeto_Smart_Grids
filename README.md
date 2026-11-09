@@ -63,8 +63,9 @@ build/smart_grid --experimentos
 ```
 
 `--experimentos` continua sendo o modo de experimentos históricos da Fase I.
-`make experimentos-fase2` executa separadamente as comparações de AGM e gera
-os CSVs/SVGs documentados em `docs/experimentos-fase-II.md`.
+`make experimentos-fase2` executa separadamente AGM, Dijkstra e Cobertura de
+Vértices exata/aproximada e gera os CSVs/SVGs documentados em
+`docs/experimentos-fase-II.md`.
 
 ## CLI
 
@@ -92,6 +93,7 @@ dot -Tpng resultados/simulacao_falha.dot -o resultados/simulacao_falha.png
 - [Consolidação da Fase I](docs/fase-I.md)
 - [Resultados experimentais](docs/resultados-fase-I.md)
 - [Modelagem de pesos da Fase II](docs/fase-II-modelagem.md)
+- [Protocolo experimental da Fase II](docs/experimentos-fase-II.md)
 - [Dijkstra: contratos, política de pesos e complexidade](docs/dijkstra.md)
 - [Cobertura de Vértices: algoritmos, garantias e limites](docs/cobertura-vertices.md)
 

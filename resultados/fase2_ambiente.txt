@@ -1,0 +1,16 @@
+protocolo=Fase II; algoritmos=Prim,Kruskal,Dijkstra,CoberturaExata,CoberturaAproximacao2; representacoes=lista,matriz
+compilador=Clang 22.1.8 
+padrao_C=201112
+sistema=Windows
+host=DESKTOP-TUH3BKF
+arquitetura=x86_64
+relogio=QueryPerformanceCounter
+repeticoes=7
+semente_base=20261106
+semente_por_tamanho=semente_base+N em uint32_t
+tamanhos_polinomiais=100,500,1000
+tamanhos_cobertura_exata=9,11,13 (limitados pela complexidade exponencial)
+arestas_por_instancia=3N-1 (arvore geradora + 2N extras)
+pesos=inteiros de 1 a 1000; origem assumida; sem unidade fisica
+memoria=estrutural da representacao + pico auxiliar solicitado no heap
+validacao=AGM minima; caminho e custo minimo; cobertura e razao <= 2

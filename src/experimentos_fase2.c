@@ -4,6 +4,8 @@
 
 #include "agm.h"
 #include "benchmark_alocacao.h"
+#include "cobertura_vertices.h"
+#include "dijkstra.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -19,6 +21,7 @@
 
 enum {
     QUANTIDADE_ESCALAS = 3,
+    QUANTIDADE_ESCALAS_EXATAS = 3,
     EXTRAS_POR_VERTICE = 2,
     PESO_MAXIMO = 1000,
     REPETICOES_MAXIMAS = 100,
@@ -26,6 +29,7 @@ enum {
 };
 
 static const size_t ESCALAS[QUANTIDADE_ESCALAS] = {100, 500, 1000};
+static const size_t ESCALAS_EXATAS[QUANTIDADE_ESCALAS_EXATAS] = {9, 11, 13};
 static const char CENARIO[] = "sintetico_conectado_ciclico_pesos_assumidos";
 static const char PARAMETROS[] =
     "arvore_geradora+2N_arestas_extras;pesos_inteiros_1_a_1000;"
@@ -40,12 +44,15 @@ typedef struct {
 } Instancia;
 
 typedef struct {
+    const char *problema;
     const char *algoritmo;
     const char *representacao;
     size_t memoria_representacao;
     size_t memoria_auxiliar;
     double tempo_ms;
     double custo;
+    double referencia;
+    double razao;
     const char *status;
 } Registro;
 
@@ -437,8 +444,8 @@ static int custo_equivalente(double primeiro, double segundo)
     return custos_equivalentes(primeiro, segundo);
 }
 
-static int medir(const Instancia *instancia, int algoritmo, int representacao,
-                 Registro *registro)
+static int medir_agm(const Instancia *instancia, int algoritmo,
+                     int representacao, Registro *registro)
 {
     ResultadoAGM resultado = {0};
     double inicio;
@@ -469,15 +476,175 @@ static int medir(const Instancia *instancia, int algoritmo, int representacao,
     return strcmp(registro->status, "OK") == 0;
 }
 
+static int referencia_caminho_minimo(const Instancia *instancia,
+                                     size_t origem, size_t destino,
+                                     double *custo)
+{
+    double *distancias;
+    int alterou = 0;
+    if (instancia == NULL || custo == NULL || origem >= instancia->vertices ||
+        destino >= instancia->vertices ||
+        instancia->vertices > SIZE_MAX / sizeof(*distancias)) {
+        return 0;
+    }
+    distancias = malloc(instancia->vertices * sizeof(*distancias));
+    if (distancias == NULL) return 0;
+    for (size_t i = 0; i < instancia->vertices; i++) distancias[i] = INFINITY;
+    distancias[origem] = 0.0;
+    for (size_t iteracao = 1; iteracao < instancia->vertices; iteracao++) {
+        alterou = 0;
+        for (size_t u = 0; u < instancia->vertices; u++) {
+            const VizinhoLista *vizinho = NULL;
+            if (buscar_vizinhos_lista(instancia->lista, u, &vizinho) !=
+                LISTA_SUCESSO) {
+                free(distancias);
+                return 0;
+            }
+            for (; vizinho != NULL; vizinho = proximo_vizinho_lista(vizinho)) {
+                size_t v = indice_vizinho_lista(vizinho);
+                PesoAresta peso = peso_vizinho_lista(vizinho);
+                if (!peso.possui_peso || peso.valor < 0.0 ||
+                    !isfinite(peso.valor)) {
+                    free(distancias);
+                    return 0;
+                }
+                if (distancias[u] != INFINITY &&
+                    distancias[u] + peso.valor < distancias[v]) {
+                    distancias[v] = distancias[u] + peso.valor;
+                    alterou = 1;
+                }
+            }
+        }
+        if (!alterou) break;
+    }
+    *custo = distancias[destino];
+    free(distancias);
+    return isfinite(*custo);
+}
+
+static int validar_dijkstra(const Instancia *instancia,
+                            const ResultadoDijkstra *resultado,
+                            size_t origem, size_t destino,
+                            int representacao_lista, double referencia)
+{
+    double soma = 0.0;
+    if (resultado == NULL || !resultado->alcancavel ||
+        resultado->quantidade_vertices_caminho == 0 ||
+        resultado->caminho == NULL || resultado->caminho[0] != origem ||
+        resultado->caminho[resultado->quantidade_vertices_caminho - 1] !=
+            destino || !resultado->utiliza_custo_assumido) {
+        return 0;
+    }
+    for (size_t i = 1; i < resultado->quantidade_vertices_caminho; i++) {
+        size_t u = resultado->caminho[i - 1];
+        size_t v = resultado->caminho[i];
+        PesoAresta peso;
+        int status = representacao_lista ?
+            consultar_peso_aresta_lista(instancia->lista, u, v, &peso) :
+            consultar_peso_aresta(instancia->matriz, u, v, &peso);
+        if (status != 0 || !peso.possui_peso || !isfinite(peso.valor)) return 0;
+        soma += peso.valor;
+    }
+    return custos_equivalentes(soma, resultado->custo_total) &&
+           custos_equivalentes(referencia, resultado->custo_total);
+}
+
+static int medir_dijkstra(const Instancia *instancia, int representacao,
+                          double referencia, Registro *registro)
+{
+    ResultadoDijkstra *resultado = NULL;
+    StatusDijkstra status;
+    double inicio;
+    double fim;
+    size_t origem = 0;
+    size_t destino = instancia->vertices - 1;
+    if (!benchmark_alocacao_reiniciar()) return 0;
+    inicio = tempo_atual_milissegundos();
+    status = representacao == 0 ?
+        executar_dijkstra_lista(instancia->lista, origem, destino,
+            DIJKSTRA_REJEITAR_ARESTA_SEM_PESO, &resultado) :
+        executar_dijkstra_matriz(instancia->matriz, origem, destino,
+            DIJKSTRA_REJEITAR_ARESTA_SEM_PESO, &resultado);
+    fim = tempo_atual_milissegundos();
+    registro->tempo_ms = fim - inicio;
+    registro->memoria_auxiliar = benchmark_alocacao_pico();
+    registro->custo = status == DIJKSTRA_SUCESSO && resultado != NULL ?
+        resultado->custo_total : NAN;
+    registro->referencia = referencia;
+    registro->razao = 1.0;
+    registro->status = status == DIJKSTRA_SUCESSO ? "OK" : "ERRO_ALGORITMO";
+    if (!isfinite(inicio) || !isfinite(fim) || registro->tempo_ms < 0.0 ||
+        !validar_dijkstra(instancia, resultado, origem, destino,
+                          representacao == 0, referencia)) {
+        registro->status = "ERRO_VALIDACAO";
+    }
+    liberar_resultado_dijkstra(&resultado);
+    if (benchmark_alocacao_ativa() != 0) registro->status = "ERRO_ALOCACAO";
+    return strcmp(registro->status, "OK") == 0;
+}
+
+static int medir_cobertura(const Instancia *instancia, int exata,
+                           int representacao, Registro *registro)
+{
+    ResultadoCoberturaVertices *resultado = NULL;
+    ConfiguracaoCoberturaExata configuracao = {64, SIZE_MAX};
+    StatusCoberturaVertices status;
+    double inicio;
+    double fim;
+    int valida = 0;
+    if (!benchmark_alocacao_reiniciar()) return 0;
+    inicio = tempo_atual_milissegundos();
+    if (exata) {
+        status = representacao == 0 ?
+            cobertura_vertices_exata_lista(instancia->lista, &configuracao,
+                                            &resultado) :
+            cobertura_vertices_exata_matriz(instancia->matriz, &configuracao,
+                                             &resultado);
+    } else {
+        status = representacao == 0 ?
+            cobertura_vertices_aproximada_lista(instancia->lista, &resultado) :
+            cobertura_vertices_aproximada_matriz(instancia->matriz, &resultado);
+    }
+    fim = tempo_atual_milissegundos();
+    registro->tempo_ms = fim - inicio;
+    registro->memoria_auxiliar = benchmark_alocacao_pico();
+    registro->custo = status == COBERTURA_SUCESSO && resultado != NULL ?
+        (double)resultado->cardinalidade : NAN;
+    registro->status = status == COBERTURA_SUCESSO ? "OK" : "ERRO_ALGORITMO";
+    if (status == COBERTURA_SUCESSO && resultado != NULL) {
+        StatusCoberturaVertices validacao = representacao == 0 ?
+            validar_cobertura_lista(instancia->lista, resultado->selecionados,
+                                     instancia->vertices, &valida) :
+            validar_cobertura_matriz(instancia->matriz, resultado->selecionados,
+                                      instancia->vertices, &valida);
+        if (validacao != COBERTURA_SUCESSO || !valida ||
+            !resultado->cobertura_valida ||
+            (exata && !resultado->otima_comprovada)) {
+            registro->status = "ERRO_VALIDACAO";
+        }
+    }
+    if (!isfinite(inicio) || !isfinite(fim) || registro->tempo_ms < 0.0) {
+        registro->status = "ERRO_VALIDACAO";
+    }
+    liberar_resultado_cobertura(&resultado);
+    if (benchmark_alocacao_ativa() != 0) registro->status = "ERRO_ALOCACAO";
+    return strcmp(registro->status, "OK") == 0;
+}
+
 static int registrar(FILE *arquivo, const Instancia *instancia,
                      const Registro *registro, size_t repeticao)
 {
     return fprintf(arquivo,
-        "%s,%s,%s,%zu,%zu,%zu,%" PRIu32 ",%s,%.9f,%zu,%zu,%.17g,%s\n",
-        CENARIO, registro->algoritmo, registro->representacao,
+        "%s,%s,%s,%s,%zu,%zu,%zu,%" PRIu32 ",%s,%.9f,%zu,%zu,%zu,"
+        "%.17g,%.17g,%.17g,%s\n",
+        CENARIO, registro->problema, registro->algoritmo,
+        registro->representacao,
         instancia->vertices, instancia->arestas, repeticao, instancia->semente,
         PARAMETROS, registro->tempo_ms, registro->memoria_representacao,
-        registro->memoria_auxiliar, registro->custo, registro->status) >= 0;
+        registro->memoria_auxiliar,
+        registro->memoria_representacao + registro->memoria_auxiliar,
+        registro->custo, registro->referencia, registro->razao,
+        registro->status) >= 0;
 }
 
 static const char *compilador(void)
@@ -526,7 +693,8 @@ static int registrar_ambiente(const char *caminho, size_t repeticoes,
     const unsigned long padrao_c = 0;
 #endif
     if (fprintf(arquivo,
-        "protocolo=Fase II; algoritmos=Prim,Kruskal; "
+        "protocolo=Fase II; algoritmos=Prim,Kruskal,Dijkstra,"
+        "CoberturaExata,CoberturaAproximacao2; "
         "representacoes=lista,matriz\n"
         "compilador=%s\n"
         "padrao_C=%lu\n"
@@ -537,10 +705,12 @@ static int registrar_ambiente(const char *caminho, size_t repeticoes,
         "repeticoes=%zu\n"
         "semente_base=%" PRIu32 "\n"
         "semente_por_tamanho=semente_base+N em uint32_t\n"
-        "tamanhos=100,500,1000\n"
+        "tamanhos_polinomiais=100,500,1000\n"
+        "tamanhos_cobertura_exata=9,11,13 (limitados pela complexidade exponencial)\n"
         "arestas_por_instancia=3N-1 (arvore geradora + 2N extras)\n"
         "pesos=inteiros de 1 a 1000; origem assumida; sem unidade fisica\n"
-        "validacao=cobertura, ausencia de ciclos, arestas e custos equivalentes\n",
+        "memoria=estrutural da representacao + pico auxiliar solicitado no heap\n"
+        "validacao=AGM minima; caminho e custo minimo; cobertura e razao <= 2\n",
         compilador(), padrao_c, sistema, host == NULL ? "desconhecido" : host,
         arquitetura, relogio, repeticoes, semente_base) < 0) {
         fclose(arquivo);
@@ -636,6 +806,39 @@ cleanup:
     return sucesso;
 }
 
+static int validar_protocolo_completo(void)
+{
+    Instancia instancia = {0};
+    Registro dijkstra[2] = {0};
+    Registro exata[2] = {0};
+    Registro aproximada[2] = {0};
+    double referencia = NAN;
+    int sucesso = validar_protocolo_agm();
+    if (!sucesso || !criar_instancia(9, UINT32_C(20262009), &instancia) ||
+        !referencia_caminho_minimo(&instancia, 0, 8, &referencia)) {
+        liberar_instancia(&instancia);
+        return 0;
+    }
+    for (int representacao = 0; representacao < 2; representacao++) {
+        sucesso = sucesso &&
+            medir_dijkstra(&instancia, representacao, referencia,
+                            &dijkstra[representacao]) &&
+            medir_cobertura(&instancia, 1, representacao,
+                             &exata[representacao]) &&
+            medir_cobertura(&instancia, 0, representacao,
+                             &aproximada[representacao]);
+    }
+    sucesso = sucesso &&
+        custos_equivalentes(dijkstra[0].custo, dijkstra[1].custo) &&
+        exata[0].custo == exata[1].custo;
+    for (int representacao = 0; representacao < 2; representacao++) {
+        sucesso = sucesso && aproximada[representacao].custo >= exata[0].custo &&
+            aproximada[representacao].custo <= 2.0 * exata[0].custo;
+    }
+    liberar_instancia(&instancia);
+    return sucesso;
+}
+
 static int interpretar_positivo(const char *texto, size_t *valor)
 {
     char *fim = NULL;
@@ -667,10 +870,12 @@ static int executar_experimentos(const char *caminho,
                                  size_t repeticoes, uint32_t semente_base)
 {
     static const char *const CABECALHO =
-        "cenario,algoritmo,representacao,N,arestas,repeticao,semente,"
+        "cenario,problema,algoritmo,representacao,N,arestas,repeticao,semente,"
         "parametros,tempo_ms,memoria_representacao_bytes,"
-        "memoria_auxiliar_pico_bytes,valor_solucao,status\n";
+        "memoria_auxiliar_pico_bytes,memoria_total_estimada_bytes,"
+        "valor_solucao,otimo_referencia,razao_aproximacao,status\n";
     FILE *arquivo = fopen(caminho, "w");
+    int sucesso_geral = 1;
     if (arquivo == NULL) {
         fprintf(stderr, "Nao foi possivel abrir CSV de saida: %s\n", caminho);
         return 0;
@@ -692,25 +897,46 @@ static int executar_experimentos(const char *caminho,
         for (size_t repeticao = 1; repeticao <= repeticoes; repeticao++) {
             Registro registros[2][2] = {
                 {
-                    {"Prim", "lista", memoria_lista(instancia.lista), 0,
-                     0.0, 0.0, "NAO_EXECUTADO"},
-                    {"Prim", "matriz", memoria_matriz(instancia.matriz), 0,
-                     0.0, 0.0, "NAO_EXECUTADO"}
+                    {"AGM", "Prim", "lista", memoria_lista(instancia.lista),
+                     0, 0.0, 0.0, 0.0, 1.0, "NAO_EXECUTADO"},
+                    {"AGM", "Prim", "matriz", memoria_matriz(instancia.matriz),
+                     0, 0.0, 0.0, 0.0, 1.0, "NAO_EXECUTADO"}
                 },
                 {
-                    {"Kruskal", "lista", memoria_lista(instancia.lista), 0,
-                     0.0, 0.0, "NAO_EXECUTADO"},
-                    {"Kruskal", "matriz", memoria_matriz(instancia.matriz), 0,
-                     0.0, 0.0, "NAO_EXECUTADO"}
+                    {"AGM", "Kruskal", "lista", memoria_lista(instancia.lista),
+                     0, 0.0, 0.0, 0.0, 1.0, "NAO_EXECUTADO"},
+                    {"AGM", "Kruskal", "matriz", memoria_matriz(instancia.matriz),
+                     0, 0.0, 0.0, 0.0, 1.0, "NAO_EXECUTADO"}
                 }
             };
+            Registro dijkstra[2] = {
+                {"CaminhoMinimo", "Dijkstra", "lista",
+                 memoria_lista(instancia.lista), 0, 0.0, 0.0, 0.0, 1.0,
+                 "NAO_EXECUTADO"},
+                {"CaminhoMinimo", "Dijkstra", "matriz",
+                 memoria_matriz(instancia.matriz), 0, 0.0, 0.0, 0.0, 1.0,
+                 "NAO_EXECUTADO"}
+            };
+            Registro cobertura[2] = {
+                {"CoberturaVertices", "Aproximacao2", "lista",
+                 memoria_lista(instancia.lista), 0, 0.0, 0.0, -1.0, -1.0,
+                 "NAO_EXECUTADO"},
+                {"CoberturaVertices", "Aproximacao2", "matriz",
+                 memoria_matriz(instancia.matriz), 0, 0.0, 0.0, -1.0, -1.0,
+                 "NAO_EXECUTADO"}
+            };
             int valido = 1;
+            double referencia_dijkstra = NAN;
+            if (!referencia_caminho_minimo(&instancia, 0, vertices - 1,
+                                            &referencia_dijkstra)) {
+                valido = 0;
+            }
             for (size_t ordem = 0; ordem < 4; ordem++) {
                 size_t indice = repeticao % 2 == 0 ? ordem : 3 - ordem;
                 int algoritmo = (int)(indice / 2);
                 int representacao = (int)(indice % 2);
-                if (!medir(&instancia, algoritmo, representacao,
-                           &registros[algoritmo][representacao])) {
+                if (!medir_agm(&instancia, algoritmo, representacao,
+                               &registros[algoritmo][representacao])) {
                     valido = 0;
                 }
             }
@@ -729,6 +955,26 @@ static int executar_experimentos(const char *caminho,
             }
             for (int algoritmo = 0; algoritmo < 2; algoritmo++) {
                 for (int representacao = 0; representacao < 2; representacao++) {
+                    registros[algoritmo][representacao].referencia =
+                        registros[0][0].custo;
+                }
+            }
+            for (int passo = 0; passo < 2; passo++) {
+                int representacao = repeticao % 2 == 0 ? passo : 1 - passo;
+                if (!medir_dijkstra(&instancia, representacao,
+                                     referencia_dijkstra,
+                                     &dijkstra[representacao]) ||
+                    !medir_cobertura(&instancia, 0, representacao,
+                                      &cobertura[representacao])) {
+                    valido = 0;
+                }
+            }
+            if (!custos_equivalentes(dijkstra[0].custo, dijkstra[1].custo)) {
+                valido = 0;
+                dijkstra[0].status = dijkstra[1].status = "ERRO_EQUIVALENCIA";
+            }
+            for (int algoritmo = 0; algoritmo < 2; algoritmo++) {
+                for (int representacao = 0; representacao < 2; representacao++) {
                     if (!registrar(arquivo, &instancia,
                                    &registros[algoritmo][representacao],
                                    repeticao)) {
@@ -736,18 +982,90 @@ static int executar_experimentos(const char *caminho,
                     }
                 }
             }
+            for (int representacao = 0; representacao < 2; representacao++) {
+                if (!registrar(arquivo, &instancia, &dijkstra[representacao],
+                               repeticao) ||
+                    !registrar(arquivo, &instancia, &cobertura[representacao],
+                               repeticao)) {
+                    valido = 0;
+                }
+            }
             if (!valido) {
                 fprintf(stderr,
                     "Resultado invalido: N=%zu repeticao=%zu; consulte status "
                     "no CSV.\n", vertices, repeticao);
+                sucesso_geral = 0;
             }
+        }
+        liberar_instancia(&instancia);
+    }
+
+    for (size_t escala = 0; escala < QUANTIDADE_ESCALAS_EXATAS; escala++) {
+        size_t vertices = ESCALAS_EXATAS[escala];
+        uint32_t semente = semente_base + UINT32_C(100000) + (uint32_t)vertices;
+        Instancia instancia = {0};
+        if (!criar_instancia(vertices, semente, &instancia)) {
+            fprintf(stderr, "Falha ao gerar instancia exata N=%zu.\n", vertices);
+            fclose(arquivo);
+            return 0;
+        }
+        for (size_t repeticao = 1; repeticao <= repeticoes; repeticao++) {
+            Registro exata[2] = {
+                {"CoberturaVertices", "BacktrackingExato", "lista",
+                 memoria_lista(instancia.lista), 0, 0.0, 0.0, 0.0, 1.0,
+                 "NAO_EXECUTADO"},
+                {"CoberturaVertices", "BacktrackingExato", "matriz",
+                 memoria_matriz(instancia.matriz), 0, 0.0, 0.0, 0.0, 1.0,
+                 "NAO_EXECUTADO"}
+            };
+            Registro aproximada[2] = {
+                {"CoberturaVertices", "Aproximacao2", "lista",
+                 memoria_lista(instancia.lista), 0, 0.0, 0.0, 0.0, 0.0,
+                 "NAO_EXECUTADO"},
+                {"CoberturaVertices", "Aproximacao2", "matriz",
+                 memoria_matriz(instancia.matriz), 0, 0.0, 0.0, 0.0, 0.0,
+                 "NAO_EXECUTADO"}
+            };
+            int valido = 1;
+            for (int passo = 0; passo < 2; passo++) {
+                int representacao = repeticao % 2 == 0 ? passo : 1 - passo;
+                if (!medir_cobertura(&instancia, 1, representacao,
+                                      &exata[representacao]) ||
+                    !medir_cobertura(&instancia, 0, representacao,
+                                      &aproximada[representacao])) {
+                    valido = 0;
+                }
+            }
+            if (exata[0].custo != exata[1].custo) {
+                valido = 0;
+            }
+            for (int representacao = 0; representacao < 2; representacao++) {
+                exata[representacao].referencia = exata[0].custo;
+                exata[representacao].razao = 1.0;
+                aproximada[representacao].referencia = exata[0].custo;
+                aproximada[representacao].razao =
+                    aproximada[representacao].custo / exata[0].custo;
+                if (aproximada[representacao].custo < exata[0].custo ||
+                    aproximada[representacao].razao > 2.0) {
+                    aproximada[representacao].status = "ERRO_APROXIMACAO";
+                    valido = 0;
+                }
+                if (!registrar(arquivo, &instancia, &exata[representacao],
+                               repeticao) ||
+                    !registrar(arquivo, &instancia,
+                               &aproximada[representacao], repeticao)) {
+                    valido = 0;
+                }
+            }
+            if (!valido) sucesso_geral = 0;
         }
         liberar_instancia(&instancia);
     }
     if (fclose(arquivo) != 0) {
         return 0;
     }
-    return registrar_ambiente(caminho_ambiente, repeticoes, semente_base);
+    return sucesso_geral &&
+           registrar_ambiente(caminho_ambiente, repeticoes, semente_base);
 }
 
 int main(int argc, char **argv)
@@ -803,12 +1121,12 @@ int main(int argc, char **argv)
         return EXIT_SUCCESS;
     }
     if (validar_protocolo) {
-        if (!validar_protocolo_agm()) {
-            fputs("Validador de AGM aceitou resultado invalido ou rejeitou "
-                  "resultado valido.\n", stderr);
+        if (!validar_protocolo_completo()) {
+            fputs("Falha nos validadores de AGM, Dijkstra ou Cobertura.\n",
+                  stderr);
             return EXIT_FAILURE;
         }
-        puts("Protocolo de validacao de AGM validado.");
+        puts("Protocolos de AGM, Dijkstra e Cobertura validados.");
         return EXIT_SUCCESS;
     }
     if (!executar_experimentos(caminho, caminho_ambiente, repeticoes,
