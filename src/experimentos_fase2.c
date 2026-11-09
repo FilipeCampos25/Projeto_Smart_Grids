@@ -49,6 +49,12 @@ typedef struct {
     const char *status;
 } Registro;
 
+typedef struct {
+    size_t origem;
+    size_t destino;
+    double peso;
+} ArestaValidacao;
+
 static double tempo_atual_milissegundos(void)
 {
 #ifdef _WIN32
@@ -105,6 +111,28 @@ static int unir(size_t *pais, size_t *rank, size_t primeiro, size_t segundo)
         rank[raiz_a]++;
     }
     return 1;
+}
+
+static int comparar_arestas_validacao(const void *primeiro, const void *segundo)
+{
+    const ArestaValidacao *a = primeiro;
+    const ArestaValidacao *b = segundo;
+    if (a->peso < b->peso) return -1;
+    if (a->peso > b->peso) return 1;
+    if (a->origem < b->origem) return -1;
+    if (a->origem > b->origem) return 1;
+    if (a->destino < b->destino) return -1;
+    if (a->destino > b->destino) return 1;
+    return 0;
+}
+
+static int custos_equivalentes(double primeiro, double segundo)
+{
+    /* Erro relativo escalado de 1e-12 acomoda apenas arredondamento da soma
+     * em ordens diferentes; a escala 1 evita tolerancia absoluta nula. */
+    return isfinite(primeiro) && isfinite(segundo) &&
+           fabs(primeiro - segundo) <=
+               1e-12 * fmax(1.0, fmax(fabs(primeiro), fabs(segundo)));
 }
 
 static void liberar_instancia(Instancia *instancia)
@@ -237,22 +265,33 @@ static int instancias_iguais(const Instancia *a, const Instancia *b)
 static int validar_resultado(const Instancia *instancia,
                              const ResultadoAGM *resultado, int representacao_lista)
 {
+    ArestaValidacao *arestas_entrada = NULL;
     size_t *pais_entrada = NULL;
     size_t *pais_saida = NULL;
     size_t *rank_entrada = NULL;
     size_t *rank_saida = NULL;
+    size_t quantidade_arestas = 0;
+    size_t componentes;
     int valido = 0;
 
-    if (instancia->vertices > SIZE_MAX / sizeof(*pais_entrada)) {
+    if (instancia == NULL || resultado == NULL ||
+        instancia->vertices > SIZE_MAX / sizeof(*pais_entrada) ||
+        instancia->arestas > SIZE_MAX / sizeof(*arestas_entrada)) {
         return 0;
     }
-    pais_entrada = malloc(instancia->vertices * sizeof(*pais_entrada));
-    pais_saida = malloc(instancia->vertices * sizeof(*pais_saida));
-    rank_entrada = calloc(instancia->vertices, sizeof(*rank_entrada));
-    rank_saida = calloc(instancia->vertices, sizeof(*rank_saida));
-    if (pais_entrada == NULL || pais_saida == NULL || rank_entrada == NULL ||
-        rank_saida == NULL) {
-        goto cleanup;
+    if (instancia->vertices != 0) {
+        pais_entrada = malloc(instancia->vertices * sizeof(*pais_entrada));
+        pais_saida = malloc(instancia->vertices * sizeof(*pais_saida));
+        rank_entrada = calloc(instancia->vertices, sizeof(*rank_entrada));
+        rank_saida = calloc(instancia->vertices, sizeof(*rank_saida));
+        if (pais_entrada == NULL || pais_saida == NULL ||
+            rank_entrada == NULL || rank_saida == NULL) {
+            goto cleanup;
+        }
+    }
+    if (instancia->arestas != 0) {
+        arestas_entrada = malloc(instancia->arestas * sizeof(*arestas_entrada));
+        if (arestas_entrada == NULL) goto cleanup;
     }
     for (size_t vertice = 0; vertice < instancia->vertices; vertice++) {
         pais_entrada[vertice] = vertice;
@@ -266,15 +305,33 @@ static int validar_resultado(const Instancia *instancia,
         }
         for (; vizinho != NULL; vizinho = proximo_vizinho_lista(vizinho)) {
             size_t destino = indice_vizinho_lista(vizinho);
-            if (origem < destino &&
-                !unir(pais_entrada, rank_entrada, origem, destino)) {
+            if (destino >= instancia->vertices || destino == origem) {
                 goto cleanup;
+            }
+            if (origem < destino) {
+                PesoAresta peso = peso_vizinho_lista(vizinho);
+                if (quantidade_arestas >= instancia->arestas ||
+                    !peso.possui_peso || !isfinite(peso.valor) ||
+                    peso.valor < 0.0) {
+                    goto cleanup;
+                }
+                arestas_entrada[quantidade_arestas++] =
+                    (ArestaValidacao){origem, destino, peso.valor};
+                unir(pais_entrada, rank_entrada, origem, destino);
             }
         }
     }
-    if (resultado->quantidade_componentes != 1 ||
-        !resultado->arvore_completa ||
-        resultado->quantidade_arestas != instancia->vertices - 1) {
+    if (quantidade_arestas != instancia->arestas) goto cleanup;
+
+    componentes = 0;
+    for (size_t vertice = 0; vertice < instancia->vertices; vertice++) {
+        if (raiz(pais_entrada, vertice) == vertice) componentes++;
+    }
+    if (resultado->quantidade_componentes != componentes ||
+        resultado->arvore_completa !=
+            (instancia->vertices != 0 && componentes == 1) ||
+        resultado->quantidade_arestas != instancia->vertices - componentes ||
+        (resultado->quantidade_arestas != 0 && resultado->arestas == NULL)) {
         goto cleanup;
     }
     {
@@ -283,6 +340,11 @@ static int validar_resultado(const Instancia *instancia,
              indice++) {
             const ArestaAGM *aresta = &resultado->arestas[indice];
             PesoAresta peso;
+            if (aresta->origem >= instancia->vertices ||
+                aresta->destino >= instancia->vertices ||
+                aresta->origem == aresta->destino) {
+                goto cleanup;
+            }
             if (representacao_lista) {
                 if (consultar_peso_aresta_lista(
                         instancia->lista, aresta->origem, aresta->destino,
@@ -294,7 +356,8 @@ static int validar_resultado(const Instancia *instancia,
                            &peso) != MATRIZ_SUCESSO) {
                 goto cleanup;
             }
-            if (!peso.possui_peso || aresta->peso.origem != peso.origem ||
+            if (!peso.possui_peso || !aresta->peso.possui_peso ||
+                aresta->peso.origem != peso.origem ||
                 aresta->peso.valor != peso.valor ||
                 !unir(pais_saida, rank_saida, aresta->origem, aresta->destino)) {
                 goto cleanup;
@@ -304,20 +367,51 @@ static int validar_resultado(const Instancia *instancia,
                 goto cleanup;
             }
         }
-        if (fabs(custo - resultado->custo_total) >
-            1e-12 * fmax(1.0, fabs(custo))) {
+        if (!custos_equivalentes(custo, resultado->custo_total)) {
             goto cleanup;
         }
     }
-    for (size_t vertice = 1; vertice < instancia->vertices; vertice++) {
-        if (raiz(pais_entrada, vertice) != raiz(pais_entrada, 0) ||
-            raiz(pais_saida, vertice) != raiz(pais_saida, 0)) {
+
+    /* Toda aresta da entrada deve ter seus extremos cobertos pela mesma
+     * arvore da saida; assim tambem se validam florestas desconectadas. */
+    for (size_t indice = 0; indice < quantidade_arestas; indice++) {
+        if (raiz(pais_saida, arestas_entrada[indice].origem) !=
+            raiz(pais_saida, arestas_entrada[indice].destino)) {
+            goto cleanup;
+        }
+    }
+
+    /* Certificado independente de custo minimo: Kruskal sobre as arestas da
+     * entrada, fora do intervalo cronometrado. */
+    if (quantidade_arestas > 1) {
+        qsort(arestas_entrada, quantidade_arestas, sizeof(*arestas_entrada),
+              comparar_arestas_validacao);
+    }
+    if (instancia->vertices != 0) {
+        memset(rank_entrada, 0,
+               instancia->vertices * sizeof(*rank_entrada));
+    }
+    for (size_t vertice = 0; vertice < instancia->vertices; vertice++) {
+        pais_entrada[vertice] = vertice;
+    }
+    {
+        double custo_minimo = 0.0;
+        for (size_t indice = 0; indice < quantidade_arestas; indice++) {
+            const ArestaValidacao *aresta = &arestas_entrada[indice];
+            if (unir(pais_entrada, rank_entrada,
+                     aresta->origem, aresta->destino)) {
+                custo_minimo += aresta->peso;
+                if (!isfinite(custo_minimo)) goto cleanup;
+            }
+        }
+        if (!custos_equivalentes(custo_minimo, resultado->custo_total)) {
             goto cleanup;
         }
     }
     valido = 1;
 
 cleanup:
+    free(arestas_entrada);
     free(pais_entrada);
     free(pais_saida);
     free(rank_entrada);
@@ -340,8 +434,7 @@ static StatusAGM executar_algoritmo(const Instancia *instancia, int algoritmo,
 
 static int custo_equivalente(double primeiro, double segundo)
 {
-    return fabs(primeiro - segundo) <=
-           1e-12 * fmax(1.0, fmax(fabs(primeiro), fabs(segundo)));
+    return custos_equivalentes(primeiro, segundo);
 }
 
 static int medir(const Instancia *instancia, int algoritmo, int representacao,
@@ -469,6 +562,80 @@ static int validar_gerador_deterministico(void)
     return sucesso;
 }
 
+static int validar_protocolo_agm(void)
+{
+    Instancia instancia = {0};
+    size_t bytes_matriz = 0;
+    ResultadoAGM valido;
+    ResultadoAGM nao_minimo;
+    ResultadoAGM com_ciclo;
+    ResultadoAGM aresta_inexistente;
+    ResultadoAGM metadados_incorretos;
+    ArestaAGM arestas_validas[] = {
+        {0, 1, {1, 1.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {1, 2, {1, 2.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {2, 3, {1, 3.0, ORIGEM_PESO_CUSTO_ASSUMIDO}}
+    };
+    ArestaAGM arestas_nao_minimas[] = {
+        {0, 1, {1, 1.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {1, 2, {1, 2.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {0, 3, {1, 10.0, ORIGEM_PESO_CUSTO_ASSUMIDO}}
+    };
+    ArestaAGM arestas_com_ciclo[] = {
+        {0, 1, {1, 1.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {1, 2, {1, 2.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {0, 2, {1, 4.0, ORIGEM_PESO_CUSTO_ASSUMIDO}}
+    };
+    ArestaAGM arestas_com_inexistente[] = {
+        {0, 1, {1, 1.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {1, 3, {1, 2.0, ORIGEM_PESO_CUSTO_ASSUMIDO}},
+        {2, 3, {1, 3.0, ORIGEM_PESO_CUSTO_ASSUMIDO}}
+    };
+    int sucesso = 0;
+
+    instancia.vertices = 4;
+    instancia.lista = criar_grafo_lista();
+    if (instancia.lista == NULL ||
+        estimar_memoria_matriz_ponderada(instancia.vertices,
+                                         &bytes_matriz) != MATRIZ_SUCESSO ||
+        criar_matriz(instancia.vertices, bytes_matriz,
+                     &instancia.matriz) != MATRIZ_SUCESSO) {
+        goto cleanup;
+    }
+    for (size_t vertice = 0; vertice < instancia.vertices; vertice++) {
+        size_t indice = SIZE_MAX;
+        if (inserir_vertice_lista(instancia.lista, &indice) != LISTA_SUCESSO ||
+            indice != vertice) {
+            goto cleanup;
+        }
+    }
+    if (!inserir_ponderada(&instancia, 0, 1, 1.0) ||
+        !inserir_ponderada(&instancia, 1, 2, 2.0) ||
+        !inserir_ponderada(&instancia, 2, 3, 3.0) ||
+        !inserir_ponderada(&instancia, 0, 2, 4.0) ||
+        !inserir_ponderada(&instancia, 0, 3, 10.0)) {
+        goto cleanup;
+    }
+
+    valido = (ResultadoAGM){arestas_validas, 3, 6.0, 1, 1};
+    nao_minimo = (ResultadoAGM){arestas_nao_minimas, 3, 13.0, 1, 1};
+    com_ciclo = (ResultadoAGM){arestas_com_ciclo, 3, 7.0, 1, 1};
+    aresta_inexistente =
+        (ResultadoAGM){arestas_com_inexistente, 3, 6.0, 1, 1};
+    metadados_incorretos =
+        (ResultadoAGM){arestas_validas, 3, 6.0, 2, 0};
+    sucesso = validar_resultado(&instancia, &valido, 1) &&
+              validar_resultado(&instancia, &valido, 0) &&
+              !validar_resultado(&instancia, &nao_minimo, 1) &&
+              !validar_resultado(&instancia, &com_ciclo, 1) &&
+              !validar_resultado(&instancia, &aresta_inexistente, 1) &&
+              !validar_resultado(&instancia, &metadados_incorretos, 1);
+
+cleanup:
+    liberar_instancia(&instancia);
+    return sucesso;
+}
+
 static int interpretar_positivo(const char *texto, size_t *valor)
 {
     char *fim = NULL;
@@ -590,10 +757,13 @@ int main(int argc, char **argv)
     size_t repeticoes = 7;
     uint32_t semente = SEMENTE_PADRAO;
     int validar_gerador = 0;
+    int validar_protocolo = 0;
 
     for (int indice = 1; indice < argc; indice++) {
         if (strcmp(argv[indice], "--validar-gerador") == 0) {
             validar_gerador = 1;
+        } else if (strcmp(argv[indice], "--validar-protocolo") == 0) {
+            validar_protocolo = 1;
         } else if (strcmp(argv[indice], "--saida") == 0 && indice + 1 < argc) {
             caminho = argv[++indice];
         } else if (strcmp(argv[indice], "--ambiente") == 0 &&
@@ -630,6 +800,15 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
         puts("Geracao deterministica validada (N=100).");
+        return EXIT_SUCCESS;
+    }
+    if (validar_protocolo) {
+        if (!validar_protocolo_agm()) {
+            fputs("Validador de AGM aceitou resultado invalido ou rejeitou "
+                  "resultado valido.\n", stderr);
+            return EXIT_FAILURE;
+        }
+        puts("Protocolo de validacao de AGM validado.");
         return EXIT_SUCCESS;
     }
     if (!executar_experimentos(caminho, caminho_ambiente, repeticoes,
